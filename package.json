@@ -1,0 +1,9 @@
+{
+  "name": "qian-wang-tou-ju",
+  "version": "0.1.0",
+  "description": "千王骰局 — Roguelike dice builder game",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
