@@ -1,16 +1,16 @@
 'use strict';
 
-const { describe, it, before } = require('node:test');
-const assert = require('node:assert/strict');
-const { GameFlow, GameState } = require('../src/game-flow');
+import { describe, it, before } from 'node:test';
+import assert from 'node:assert/strict';
+import { GameFlow, GameState } from '../src/game-flow.js';
 
 /** Path to test data directory */
 const TEST_DATA_DIR = 'assets/data';
 
 /** Test helper - create a GameFlow instance and load data */
-function createGameFlow() {
+async function createGameFlow() {
   const gameFlow = new GameFlow({ dataDir: TEST_DATA_DIR });
-  const loaded = gameFlow.load();
+  const loaded = await gameFlow.load();
   if (!loaded) {
     throw new Error('Failed to load test data');
   }
@@ -21,8 +21,8 @@ function createGameFlow() {
 // AC-1: newGame correctly initializes all subsystems
 // ---------------------------------------------------------------------------
 describe('AC-1: newGame initializes all subsystems', () => {
-  it('resets all subsystems and sets state to BATTLE', () => {
-    const game = createGameFlow();
+  it('resets all subsystems and sets state to BATTLE', async () => {
+    const game = await createGameFlow();
     assert.strictEqual(game.getState(), GameState.MENU);
 
     const ok = game.newGame(42);
@@ -47,8 +47,8 @@ describe('AC-1: newGame initializes all subsystems', () => {
     assert.strictEqual(game.getCurrentRound(), 1);
   });
 
-  it('gives free consumable at start', () => {
-    const game = createGameFlow();
+  it('gives free consumable at start', async () => {
+    const game = await createGameFlow();
     game.newGame(42);
 
     const cheating = game.getCheating();
@@ -57,8 +57,8 @@ describe('AC-1: newGame initializes all subsystems', () => {
     assert.strictEqual(consumables[0].id, 'face_change');
   });
 
-  it('clears previous game state on newGame', () => {
-    const game = createGameFlow();
+  it('clears previous game state on newGame', async () => {
+    const game = await createGameFlow();
 
     // First game
     game.newGame(1);
@@ -87,8 +87,8 @@ describe('AC-1: newGame initializes all subsystems', () => {
 // AC-2: 8 victories lead to VICTORY state
 // ---------------------------------------------------------------------------
 describe('AC-2: 8 victories lead to VICTORY', () => {
-  it('completes 8 rounds and enters VICTORY', () => {
-    const game = createGameFlow();
+  it('completes 8 rounds and enters VICTORY', async () => {
+    const game = await createGameFlow();
     game.newGame(999);
 
     const totalRounds = game.getTotalRounds();
@@ -114,8 +114,8 @@ describe('AC-2: 8 victories lead to VICTORY', () => {
     assert.ok(game.isGameOver());
   });
 
-  it('isLastRound returns true for round 8', () => {
-    const game = createGameFlow();
+  it('isLastRound returns true for round 8', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
 
     // Simulate reaching round 8
@@ -138,8 +138,8 @@ describe('AC-2: 8 victories lead to VICTORY', () => {
 // AC-3: Any round defeat leads to DEFEAT
 // ---------------------------------------------------------------------------
 describe('AC-3: Defeat leads to DEFEAT state', () => {
-  it('early round defeat ends game in DEFEAT', () => {
-    const game = createGameFlow();
+  it('early round defeat ends game in DEFEAT', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
 
     // Execute battle - with random dice, we may lose
@@ -154,8 +154,8 @@ describe('AC-3: Defeat leads to DEFEAT state', () => {
     }
   });
 
-  it('mid-game defeat ends game in DEFEAT', () => {
-    const game = createGameFlow();
+  it('mid-game defeat ends game in DEFEAT', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
 
     // Try to get to round 3-4
@@ -177,8 +177,8 @@ describe('AC-3: Defeat leads to DEFEAT state', () => {
 // AC-4: Round 8 victory skips shop
 // ---------------------------------------------------------------------------
 describe('AC-4: Round 8 victory skips shop', () => {
-  it('victory in round 8 goes to VICTORY not SHOP', () => {
-    const game = createGameFlow();
+  it('victory in round 8 goes to VICTORY not SHOP', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
 
     const totalRounds = game.getTotalRounds();
@@ -215,9 +215,8 @@ describe('AC-4: Round 8 victory skips shop', () => {
 // AC-5: Non-final victory enters SHOP
 // ---------------------------------------------------------------------------
 describe('AC-5: Non-final victory enters SHOP', () => {
-  it('victory in round 1-7 enters SHOP state', () => {
-    const game = createGameFlow();
-    game.newGame(1);
+  it('victory in round 1-7 enters SHOP state', async () => {
+    const game = await createGameFlow();
 
     // Try a few times with different seeds to find a round 1 win
     for (let seed = 1; seed < 100; seed++) {
@@ -235,8 +234,8 @@ describe('AC-5: Non-final victory enters SHOP', () => {
     console.log('Skipped: could not find round 1 win in 100 tries');
   });
 
-  it('shop is opened with correct round number', () => {
-    const game = createGameFlow();
+  it('shop is opened with correct round number', async () => {
+    const game = await createGameFlow();
 
     for (let seed = 1; seed < 50; seed++) {
       game.newGame(seed);
@@ -256,8 +255,8 @@ describe('AC-5: Non-final victory enters SHOP', () => {
 // AC-6: newGame rejected during BATTLE
 // ---------------------------------------------------------------------------
 describe('AC-6: newGame rejected during active game', () => {
-  it('returns false when called from BATTLE state', () => {
-    const game = createGameFlow();
+  it('returns false when called from BATTLE state', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
     assert.strictEqual(game.getState(), GameState.BATTLE);
 
@@ -266,8 +265,8 @@ describe('AC-6: newGame rejected during active game', () => {
     assert.strictEqual(game.getState(), GameState.BATTLE);
   });
 
-  it('returns false when called from SHOP state', () => {
-    const game = createGameFlow();
+  it('returns false when called from SHOP state', async () => {
+    const game = await createGameFlow();
 
     // Find a seed that gives round 1 victory
     for (let seed = 1; seed < 100; seed++) {
@@ -285,8 +284,8 @@ describe('AC-6: newGame rejected during active game', () => {
     console.log('Skipped: could not reach SHOP state');
   });
 
-  it('returns true when called from VICTORY state', () => {
-    const game = createGameFlow();
+  it('returns true when called from VICTORY state', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
 
     // Simulate reaching victory (hard to do with random dice)
@@ -302,8 +301,8 @@ describe('AC-6: newGame rejected during active game', () => {
     }
   });
 
-  it('returns true when called from DEFEAT state', () => {
-    const game = createGameFlow();
+  it('returns true when called from DEFEAT state', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
     game.executeBattle();
 
@@ -319,11 +318,11 @@ describe('AC-6: newGame rejected during active game', () => {
 // AC-7: Same seed produces same flow
 // ---------------------------------------------------------------------------
 describe('AC-7: Deterministic with same seed', () => {
-  it('same seed produces same enemy for round 1', () => {
-    const game1 = createGameFlow();
+  it('same seed produces same enemy for round 1', async () => {
+    const game1 = await createGameFlow();
     game1.newGame(12345);
 
-    const game2 = createGameFlow();
+    const game2 = await createGameFlow();
     game2.newGame(12345);
 
     const enemy1 = game1.getEnemy();
@@ -333,8 +332,8 @@ describe('AC-7: Deterministic with same seed', () => {
     assert.strictEqual(enemy1.getTargetScore(), enemy2.getTargetScore());
   });
 
-  it('same seed produces same shop items', () => {
-    const game1 = createGameFlow();
+  it('same seed produces same shop items', async () => {
+    const game1 = await createGameFlow();
 
     // Find a seed that reaches shop
     for (let seed = 1; seed < 100; seed++) {
@@ -344,7 +343,7 @@ describe('AC-7: Deterministic with same seed', () => {
       if (game1.getState() === GameState.SHOP) {
         const items1 = game1.getShop().getDisplayItems().map(i => i?.id);
 
-        const game2 = createGameFlow();
+        const game2 = await createGameFlow();
         game2.newGame(seed);
         game2.executeBattle();
         const items2 = game2.getShop().getDisplayItems().map(i => i?.id);
@@ -361,8 +360,8 @@ describe('AC-7: Deterministic with same seed', () => {
 // AC-8: Quick restart works correctly
 // ---------------------------------------------------------------------------
 describe('AC-8: Quick restart (newGame multiple times)', () => {
-  it('can call newGame 3 times in succession', () => {
-    const game = createGameFlow();
+  it('can call newGame 3 times in succession', async () => {
+    const game = await createGameFlow();
 
     for (let i = 1; i <= 3; i++) {
       // First call should succeed
@@ -383,8 +382,8 @@ describe('AC-8: Quick restart (newGame multiple times)', () => {
     }
   });
 
-  it('each newGame uses its own seed', () => {
-    const game = createGameFlow();
+  it('each newGame uses its own seed', async () => {
+    const game = await createGameFlow();
 
     game.newGame(111);
     const seed1 = game.getSeed();
@@ -401,14 +400,14 @@ describe('AC-8: Quick restart (newGame multiple times)', () => {
 // AC-9: getCurrentRound returns correct value
 // ---------------------------------------------------------------------------
 describe('AC-9: getCurrentRound accuracy', () => {
-  it('returns 1 at start', () => {
-    const game = createGameFlow();
+  it('returns 1 at start', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
     assert.strictEqual(game.getCurrentRound(), 1);
   });
 
-  it('increments after closing shop', () => {
-    const game = createGameFlow();
+  it('increments after closing shop', async () => {
+    const game = await createGameFlow();
 
     // Find a seed that reaches shop
     for (let seed = 1; seed < 100; seed++) {
@@ -431,8 +430,8 @@ describe('AC-9: getCurrentRound accuracy', () => {
 // AC-10: End-to-end complete flow
 // ---------------------------------------------------------------------------
 describe('AC-10: End-to-end complete game flow', () => {
-  it('complete flow from MENU to game over', () => {
-    const game = createGameFlow();
+  it('complete flow from MENU to game over', async () => {
+    const game = await createGameFlow();
 
     // Start
     assert.strictEqual(game.getState(), GameState.MENU);
@@ -465,8 +464,8 @@ describe('AC-10: End-to-end complete game flow', () => {
     }
   });
 
-  it('can restart after game over', () => {
-    const game = createGameFlow();
+  it('can restart after game over', async () => {
+    const game = await createGameFlow();
 
     // Play until game over
     game.newGame(1);
@@ -493,8 +492,8 @@ describe('AC-10: End-to-end complete game flow', () => {
 // Additional: Surrender functionality
 // ---------------------------------------------------------------------------
 describe('surrender', () => {
-  it('surrender in BATTLE ends game in DEFEAT', () => {
-    const game = createGameFlow();
+  it('surrender in BATTLE ends game in DEFEAT', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
 
     const ok = game.surrender();
@@ -507,8 +506,8 @@ describe('surrender', () => {
     assert.strictEqual(result.surrendered, true);
   });
 
-  it('surrender in SHOP ends game in DEFEAT', () => {
-    const game = createGameFlow();
+  it('surrender in SHOP ends game in DEFEAT', async () => {
+    const game = await createGameFlow();
 
     // Find a seed that reaches shop
     for (let seed = 1; seed < 100; seed++) {
@@ -525,8 +524,8 @@ describe('surrender', () => {
     console.log('Skipped: could not reach SHOP state');
   });
 
-  it('surrender rejected after game over', () => {
-    const game = createGameFlow();
+  it('surrender rejected after game over', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
     game.surrender();
 
@@ -541,20 +540,20 @@ describe('surrender', () => {
 // Additional: Query methods
 // ---------------------------------------------------------------------------
 describe('query methods', () => {
-  it('getTotalRounds returns 8', () => {
-    const game = createGameFlow();
-    game.load();
+  it('getTotalRounds returns 8', async () => {
+    const game = await createGameFlow();
+    await game.load();
     assert.strictEqual(game.getTotalRounds(), 8);
   });
 
-  it('getResult returns null when game not over', () => {
-    const game = createGameFlow();
+  it('getResult returns null when game not over', async () => {
+    const game = await createGameFlow();
     game.newGame(1);
     assert.strictEqual(game.getResult(), null);
   });
 
-  it('isState correctly checks state', () => {
-    const game = createGameFlow();
+  it('isState correctly checks state', async () => {
+    const game = await createGameFlow();
     assert.strictEqual(game.isState(GameState.MENU), true);
 
     game.newGame(1);

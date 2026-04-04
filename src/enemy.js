@@ -208,4 +208,4 @@ class Enemy {
   }
 }
 
-module.exports = { Enemy };
+export { Enemy };

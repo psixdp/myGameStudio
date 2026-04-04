@@ -1,13 +1,13 @@
 'use strict';
 
-const { DataConfig } = require('./data-config');
-const { RNG } = require('./rng');
-const { DicePool } = require('./dice');
-const { Economy } = require('./economy');
-const { CheatingAbilities } = require('./cheating');
-const { Enemy } = require('./enemy');
-const { Combat } = require('./combat');
-const { Shop } = require('./shop');
+import { DataConfig } from './data-config.js';
+import { RNG } from './rng.js';
+import { DicePool } from './dice.js';
+import { Economy } from './economy.js';
+import { CheatingAbilities } from './cheating.js';
+import { Enemy } from './enemy.js';
+import { Combat } from './combat.js';
+import { Shop } from './shop.js';
 
 /**
  * Game state enumeration.
@@ -63,11 +63,11 @@ class GameFlow {
 
   /**
    * Load config data. Call once before newGame().
-   * @returns {boolean} success
+   * @returns {Promise<boolean>} success
    */
-  load() {
+  async load() {
     try {
-      this._dataConfig.load(this._dataDir);
+      await this._dataConfig.load(this._dataDir);
       const errors = this._dataConfig.validate();
       if (errors.length > 0) {
         console.error('Data validation errors:', errors);
@@ -333,4 +333,4 @@ class GameFlow {
 // Export GameState enum for external use
 GameFlow.GameState = GameState;
 
-module.exports = { GameFlow, GameState };
+export { GameFlow, GameState };

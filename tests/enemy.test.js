@@ -1,10 +1,10 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { Enemy } = require('../src/enemy');
-const { DataConfig } = require('../src/data-config');
-const { RNG } = require('../src/rng');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { Enemy } from '../src/enemy.js';
+import { DataConfig } from '../src/data-config.js';
+import { RNG } from '../src/rng.js';
 
 // Helpers
 function makeEnemySystem(seed = 42) {

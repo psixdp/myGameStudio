@@ -165,4 +165,4 @@ class RNG {
   }
 }
 
-module.exports = { RNG, RandomStream, mulberry32, hashString };
+export { RNG, RandomStream, mulberry32, hashString };

@@ -288,12 +288,11 @@ function appliesToCategory(passive, cat) {
   return true;
 }
 
-module.exports = {
-  ScoringEngine: { score },
-  // Export internals for testing
-  _internals: {
-    isAllSame, isFullHouse, hasConsecutive, hasSameValue,
-    matchesCategory, findBestCategory, calcLinkBonus,
-    applyLowestZero, countFreq, getMatchCount, appliesToCategory,
-  },
+export const ScoringEngine = { score };
+
+// Export internals for testing
+export const _internals = {
+  isAllSame, isFullHouse, hasConsecutive, hasSameValue,
+  matchesCategory, findBestCategory, calcLinkBonus,
+  applyLowestZero, countFreq, getMatchCount, appliesToCategory,
 };

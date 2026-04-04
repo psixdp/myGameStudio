@@ -342,4 +342,4 @@ class Combat {
   }
 }
 
-module.exports = { Combat };
+export { Combat };

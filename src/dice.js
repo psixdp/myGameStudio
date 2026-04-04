@@ -201,4 +201,4 @@ class DicePool {
   }
 }
 
-module.exports = { DicePool };
+export { DicePool };

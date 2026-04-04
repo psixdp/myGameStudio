@@ -283,4 +283,4 @@ class Shop {
   }
 }
 
-module.exports = { Shop };
+export { Shop };

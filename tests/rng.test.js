@@ -1,8 +1,8 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { RNG, RandomStream, mulberry32, hashString } = require('../src/rng');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { RNG, RandomStream, mulberry32, hashString } from '../src/rng.js';
 
 // ---------------------------------------------------------------------------
 // AC-1: Same seed produces identical sequences

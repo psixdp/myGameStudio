@@ -1,9 +1,9 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { Economy } = require('../src/economy');
-const { DataConfig } = require('../src/data-config');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { Economy } from '../src/economy.js';
+import { DataConfig } from '../src/data-config.js';
 
 // Helpers
 function makeEconomy() {

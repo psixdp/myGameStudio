@@ -1,13 +1,18 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { ScoringEngine, _internals } = require('../src/scoring');
-const path = require('path');
-const { DataConfig } = require('../src/data-config');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { ScoringEngine, _internals } from '../src/scoring.js';
+import path from 'path';
+import { DataConfig } from '../src/data-config.js';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, '..', 'assets', 'data');
-const config = new DataConfig().load(DATA_DIR);
+const config = new DataConfig();
+await config.load(DATA_DIR);
 const categories = config.getCategories(); // sorted by priority
 
 // Helpers

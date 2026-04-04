@@ -1,9 +1,9 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { DicePool } = require('../src/dice');
-const { RNG } = require('../src/rng');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { DicePool } from '../src/dice.js';
+import { RNG } from '../src/rng.js';
 
 // Helpers
 function makePool(seed = 42, overrides = {}) {
