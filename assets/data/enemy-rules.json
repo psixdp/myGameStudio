@@ -1,0 +1,36 @@
+[
+  {
+    "id": "block_pair",
+    "name": "封锁对子",
+    "description": "对子分类无法匹配",
+    "targetCategory": "pair",
+    "effectType": "block_category"
+  },
+  {
+    "id": "zero_lowest",
+    "name": "最低点归零",
+    "description": "最低点骰子计分时视为0",
+    "effectType": "zero_lowest_dice",
+    "params": { "count": 1 }
+  },
+  {
+    "id": "swap_dice",
+    "name": "狸猫换子",
+    "description": "敌人重掷你1颗骰子",
+    "effectType": "reroll_random",
+    "params": { "count": 1, "phase": "post_roll" }
+  },
+  {
+    "id": "seal_passive",
+    "name": "封印被动",
+    "description": "最贵的被动本轮不生效",
+    "effectType": "seal_most_expensive_passive"
+  },
+  {
+    "id": "suppress_all",
+    "name": "全面压制",
+    "description": "所有骰子点数-1（最低为1）",
+    "effectType": "dice_decrease",
+    "params": { "amount": 1, "minValue": 1 }
+  }
+]

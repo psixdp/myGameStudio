@@ -1,0 +1,69 @@
+[
+  {
+    "id": "yahtzee",
+    "name": "豹子",
+    "priority": 1,
+    "minDice": 3,
+    "matchType": "all_same",
+    "bonusType": "multiplier",
+    "bonusValue": 3
+  },
+  {
+    "id": "full_house",
+    "name": "满堂红",
+    "priority": 2,
+    "minDice": 5,
+    "matchType": "full_house",
+    "bonusType": "flat",
+    "bonusValue": 15
+  },
+  {
+    "id": "large_straight",
+    "name": "大顺",
+    "priority": 3,
+    "minDice": 5,
+    "matchType": "consecutive",
+    "consecutiveCount": 5,
+    "bonusType": "flat",
+    "bonusValue": 20
+  },
+  {
+    "id": "small_straight",
+    "name": "小顺",
+    "priority": 4,
+    "minDice": 4,
+    "matchType": "consecutive",
+    "consecutiveCount": 4,
+    "bonusType": "flat",
+    "bonusValue": 10
+  },
+  {
+    "id": "three_of_a_kind",
+    "name": "三条",
+    "priority": 5,
+    "minDice": 3,
+    "matchType": "same_value",
+    "matchCount": 3,
+    "bonusType": "flat",
+    "bonusValue": 5
+  },
+  {
+    "id": "pair",
+    "name": "对子",
+    "priority": 6,
+    "minDice": 2,
+    "matchType": "same_value",
+    "matchCount": 2,
+    "bonusType": "flat",
+    "bonusValue": 0
+  },
+  {
+    "id": "bust",
+    "name": "散牌",
+    "priority": 7,
+    "minDice": 0,
+    "matchType": "fallback",
+    "bonusType": "flat",
+    "bonusValue": 0
+  }
+]

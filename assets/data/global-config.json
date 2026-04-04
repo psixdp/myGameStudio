@@ -1,0 +1,19 @@
+{
+  "dice": {
+    "initialCount": 4,
+    "maxCount": 7,
+    "sides": 6,
+    "minValue": 1,
+    "maxValue": 6
+  },
+  "battle": {
+    "consumablesPerRound": 2,
+    "rollsPerRound": 1
+  },
+  "startingItems": {
+    "freeConsumable": "face_change"
+  },
+  "rounds": {
+    "total": 8
+  }
+}
