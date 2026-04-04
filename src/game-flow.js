@@ -1,0 +1,336 @@
+'use strict';
+
+const { DataConfig } = require('./data-config');
+const { RNG } = require('./rng');
+const { DicePool } = require('./dice');
+const { Economy } = require('./economy');
+const { CheatingAbilities } = require('./cheating');
+const { Enemy } = require('./enemy');
+const { Combat } = require('./combat');
+const { Shop } = require('./shop');
+
+/**
+ * Game state enumeration.
+ * @enum {string}
+ */
+const GameState = {
+  MENU: 'MENU',
+  INITIALIZING: 'INITIALIZING',
+  BATTLE: 'BATTLE',
+  SHOP: 'SHOP',
+  VICTORY: 'VICTORY',
+  DEFEAT: 'DEFEAT',
+};
+
+/**
+ * GameFlow — orchestrates the complete game lifecycle.
+ *
+ * This is the top-level system that manages all subsystems and coordinates
+ * the flow from menu through 8 rounds of battle+shop to victory/defeat.
+ */
+class GameFlow {
+  /**
+   * @param {object} opts
+   * @param {string} opts.dataDir - path to assets/data/
+   */
+  constructor(opts = {}) {
+    this._dataDir = opts.dataDir || 'assets/data';
+
+    // State
+    /** @type {string} One of GameState values */
+    this._state = GameState.MENU;
+    /** @type {number} Current round (1-8) */
+    this._round = 1;
+    /** @type {number|null} Seed used for current game */
+    this._seed = null;
+    /** @type {object|null} Game result {result: 'VICTORY'|'DEFEAT', round, score} */
+    this._gameResult = null;
+
+    // Create subsystems
+    this._dataConfig = new DataConfig();
+    this._rng = new RNG();
+    this._dicePool = null; // created in newGame
+    this._economy = null;
+    this._cheating = null;
+    this._enemy = null;
+    this._combat = null;
+    this._shop = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API - Lifecycle
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Load config data. Call once before newGame().
+   * @returns {boolean} success
+   */
+  load() {
+    try {
+      this._dataConfig.load(this._dataDir);
+      const errors = this._dataConfig.validate();
+      if (errors.length > 0) {
+        console.error('Data validation errors:', errors);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Failed to load data:', err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Start a new game with optional seed.
+   * Only allowed from MENU, VICTORY, or DEFEAT states.
+   * @param {number} [seed] - optional seed (uses random if not provided)
+   * @returns {boolean} success
+   */
+  newGame(seed) {
+    // Validate state
+    if (
+      this._state !== GameState.MENU &&
+      this._state !== GameState.VICTORY &&
+      this._state !== GameState.DEFEAT
+    ) {
+      return false;
+    }
+
+    this._state = GameState.INITIALIZING;
+
+    // Generate or use provided seed
+    this._seed = (seed != null && seed !== '')
+      ? Math.abs(Math.floor(Number(seed))) || 1
+      : Date.now();
+
+    // Initialize RNG
+    this._rng.seed(this._seed);
+
+    // Create or reset subsystems
+    const diceStream = this._rng.getStream('dice');
+    const cloneStream = this._rng.getStream('clone');
+    const shopStream = this._rng.getStream('shop');
+    const enemyStream = this._rng.getStream('enemy');
+
+    const diceConfig = this._dataConfig.getGlobal().dice || {};
+
+    this._dicePool = new DicePool({
+      diceStream,
+      cloneStream,
+      minFace: diceConfig.minValue ?? 1,
+      maxFace: diceConfig.maxValue ?? 6,
+      initialCount: diceConfig.initialCount ?? 4,
+      maxCount: diceConfig.maxCount ?? 7,
+    });
+
+    this._economy = new Economy({ dataConfig: this._dataConfig });
+    this._cheating = new CheatingAbilities({
+      dataConfig: this._dataConfig,
+      economy: this._economy,
+      cloneStream,
+    });
+    this._enemy = new Enemy({
+      dataConfig: this._dataConfig,
+      enemyStream,
+    });
+    this._combat = new Combat({
+      dicePool: this._dicePool,
+      dataConfig: this._dataConfig,
+      enemy: this._enemy,
+      cheating: this._cheating,
+      economy: this._economy,
+      rng: this._rng,
+    });
+    this._shop = new Shop({
+      dataConfig: this._dataConfig,
+      economy: this._economy,
+      cheating: this._cheating,
+      dicePool: this._dicePool,
+      shopStream,
+    });
+
+    // Apply starting items (free consumable)
+    const startingItems = this._dataConfig.getGlobal().startingItems || {};
+    if (startingItems.freeConsumable) {
+      this._cheating.addConsumable(startingItems.freeConsumable);
+    }
+
+    // Reset game state
+    this._round = 1;
+    this._gameResult = null;
+
+    // Transition to BATTLE
+    this._state = GameState.BATTLE;
+    return true;
+  }
+
+  /**
+   * Forfeit the current game (player surrenders).
+   * Ends game in DEFEAT.
+   * @returns {boolean} success
+   */
+  surrender() {
+    if (this._state !== GameState.BATTLE && this._state !== GameState.SHOP) {
+      return false;
+    }
+
+    this._gameResult = {
+      result: 'DEFEAT',
+      round: this._round,
+      score: 0,
+      surrendered: true,
+    };
+    this._state = GameState.DEFEAT;
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API - Phase Control
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Execute the battle for the current round.
+   * Must be in BATTLE state.
+   * @returns {object|null} combat result or null if invalid state
+   */
+  executeBattle() {
+    if (this._state !== GameState.BATTLE) {
+      return null;
+    }
+
+    const result = this._combat.execute(this._round);
+
+    // Determine next state
+    if (result.victory) {
+      if (this._round >= this.getTotalRounds()) {
+        // Final victory
+        this._gameResult = {
+          result: 'VICTORY',
+          round: this._round,
+          score: result.score,
+        };
+        this._state = GameState.VICTORY;
+      } else {
+        // Enter shop
+        this._shop.open(this._round);
+        this._state = GameState.SHOP;
+      }
+    } else {
+      // Defeat
+      this._gameResult = {
+        result: 'DEFEAT',
+        round: this._round,
+        score: result.score,
+      };
+      this._state = GameState.DEFEAT;
+    }
+
+    return result;
+  }
+
+  /**
+   * Close the shop and advance to next round.
+   * Must be in SHOP state.
+   * @returns {boolean} success
+   */
+  closeShop() {
+    if (this._state !== GameState.SHOP) {
+      return false;
+    }
+
+    this._shop.close();
+    this._round++;
+    this._state = GameState.BATTLE;
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API - Query
+  // ---------------------------------------------------------------------------
+
+  /** Get current game state. */
+  getState() {
+    return this._state;
+  }
+
+  /** Check if state matches a given value. */
+  isState(state) {
+    return this._state === state;
+  }
+
+  /** Get current round number (1-8). */
+  getCurrentRound() {
+    return this._round;
+  }
+
+  /** Get total rounds for the game. */
+  getTotalRounds() {
+    return this._dataConfig.getGlobal().rounds?.total ?? 8;
+  }
+
+  /** Get the seed used for current game. */
+  getSeed() {
+    return this._seed;
+  }
+
+  /** Check if game is over (VICTORY or DEFEAT). */
+  isGameOver() {
+    return (
+      this._state === GameState.VICTORY ||
+      this._state === GameState.DEFEAT
+    );
+  }
+
+  /**
+   * Get game result.
+   * @returns {object|null} {result: 'VICTORY'|'DEFEAT', round, score, surrendered?}
+   */
+  getResult() {
+    return this._gameResult ? { ...this._gameResult } : null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API - Subsystem Access (for UI, testing, etc.)
+  // ---------------------------------------------------------------------------
+
+  /** Get DataConfig instance. */
+  getDataConfig() { return this._dataConfig; }
+
+  /** Get RNG instance. */
+  getRNG() { return this._rng; }
+
+  /** Get DicePool instance. */
+  getDicePool() { return this._dicePool; }
+
+  /** Get Economy instance. */
+  getEconomy() { return this._economy; }
+
+  /** Get CheatingAbilities instance. */
+  getCheating() { return this._cheating; }
+
+  /** Get Enemy instance. */
+  getEnemy() { return this._enemy; }
+
+  /** Get Combat instance. */
+  getCombat() { return this._combat; }
+
+  /** Get Shop instance. */
+  getShop() { return this._shop; }
+
+  // ---------------------------------------------------------------------------
+  // Internal
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Check if current round is the last round.
+   * @returns {boolean}
+   */
+  _isLastRound() {
+    return this._round >= this.getTotalRounds();
+  }
+}
+
+// Export GameState enum for external use
+GameFlow.GameState = GameState;
+
+module.exports = { GameFlow, GameState };
