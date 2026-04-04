@@ -13,6 +13,7 @@
  *   - cheating: CheatingAbilities instance for hasPassive() / addConsumable() / addPassive()
  *   - dicePool: DicePool instance for getPermanentCount() / addPermanentDie()
  *   - shopStream: RandomStream from RNG.getStream('shop')
+ *   - enemy: Enemy instance for loading next round preview
  */
 class Shop {
   /**
@@ -22,6 +23,7 @@ class Shop {
    * @param {import('./cheating.js').CheatingAbilities} opts.cheating
    * @param {import('./dice.js').DicePool} opts.dicePool
    * @param {import('./rng.js').RandomStream} opts.shopStream
+   * @param {import('./enemy.js').Enemy} opts.enemy
    */
   constructor(opts = {}) {
     this._dataConfig = opts.dataConfig;
@@ -29,6 +31,7 @@ class Shop {
     this._cheating = opts.cheating;
     this._dicePool = opts.dicePool;
     this._shopStream = opts.shopStream;
+    this._enemy = opts.enemy;
 
     /** @type {boolean} Whether the shop is currently open */
     this._open = false;
@@ -38,6 +41,9 @@ class Shop {
 
     /** @type {Array<object|null>} Displayed items (null = sold slot) */
     this._display = [];
+
+    /** @type {object|null} Next round enemy preview */
+    this._nextEnemyPreview = null;
 
     // Pre-load config
     this._shopConfig = null;
@@ -61,6 +67,14 @@ class Shop {
     const econ = this._dataConfig.getEconomy();
     this._shopConfig = econ.shop || { itemsPerRefresh: 3, refreshCost: 1 };
     this._expansionConfig = econ.diceExpansion || { bonusRounds: [1, 2, 3], bonusWeight: 2.0 };
+
+    // Load next round enemy preview
+    const totalRounds = this._dataConfig.getGlobal().rounds?.total ?? 8;
+    if (round < totalRounds) {
+      this._nextEnemyPreview = this._enemy.loadPreviewForRound(round + 1);
+    } else {
+      this._nextEnemyPreview = null; // No next round after final
+    }
 
     this._drawItems();
   }
@@ -88,6 +102,14 @@ class Shop {
    */
   getDisplayItems() {
     return this._display.map(item => (item === null ? null : { ...item }));
+  }
+
+  /**
+   * Get next round enemy preview.
+   * @returns {object|null} {id, name, round, targetScore, rules, isBoss}
+   */
+  getNextEnemyPreview() {
+    return this._nextEnemyPreview ? { ...this._nextEnemyPreview } : null;
   }
 
   /**

@@ -34,9 +34,15 @@ class Enemy {
   /**
    * Load enemy for a specific round.
    * For boss (round 8), randomly selects rules from the pool.
+   * Idempotent: if the same round is already loaded, does nothing.
    * @param {number} round - round number (1-8)
    */
   loadForRound(round) {
+    // Idempotent: skip if already loaded for this round
+    if (this._current && this._current.round === round) {
+      return;
+    }
+
     const enemy = this._dataConfig.getEnemy(round);
     if (!enemy) {
       throw new Error(`No enemy found for round ${round}`);
@@ -58,6 +64,43 @@ class Enemy {
    */
   _loadFixedRules(ruleIds) {
     this._rules = ruleIds.map(id => this._dataConfig.getEnemyRule(id)).filter(r => r != null);
+  }
+
+  /**
+   * Load enemy preview for a round WITHOUT setting it as current.
+   * Used for shop to show next round's enemy info.
+   * @param {number} round - round number (1-8)
+   * @returns {object|null} enemy preview with name, targetScore, and rules
+   */
+  loadPreviewForRound(round) {
+    const enemy = this._dataConfig.getEnemy(round);
+    if (!enemy) {
+      return null;
+    }
+
+    // Resolve rules for preview
+    let rules = [];
+    if (enemy.bossRule) {
+      // For boss, we can't randomize yet - just show what's possible
+      // Show the rule pool info instead
+      rules = [{
+        id: 'boss',
+        name: 'Boss 规则池',
+        description: `随机从 ${enemy.bossRule.pool} 条规则中选择 ${enemy.bossRule.count} 条`,
+        effectType: 'info',
+      }];
+    } else {
+      rules = enemy.rules.map(id => this._dataConfig.getEnemyRule(id)).filter(r => r != null);
+    }
+
+    return {
+      id: enemy.id,
+      name: enemy.name,
+      round: enemy.round,
+      targetScore: enemy.targetScore,
+      rules,
+      isBoss: enemy.bossRule != null,
+    };
   }
 
   /**
