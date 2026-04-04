@@ -125,6 +125,11 @@ class DataConfig {
     return this._ruleById[id] ? { ...this._ruleById[id] } : null;
   }
 
+  /** Get all enemy rule definitions. */
+  getEnemyRules() {
+    return this._data.enemyRules.map(r => ({ ...r }));
+  }
+
   /** Get token reward for a given round (1-based). */
   getTokenReward(round) {
     return this._data.economy.tokenRewards[round - 1];
