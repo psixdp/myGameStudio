@@ -49,28 +49,33 @@ class Combat {
     return [...this._stepLog];
   }
 
+  /** Get current round info (for UI preview). */
+  getCurrentRoundInfo() {
+    return this._currentRoundInfo;
+  }
+
   /**
-   * Execute a full battle for the given round.
-   * This runs steps 1-12 in sequence.
+   * Phase 1: Execute initial roll (steps 1-8).
+   * This calculates the base score WITHOUT consumables or final multipliers.
+   * Player can use consumables after seeing this result.
    * @param {number} round - round number (1-8)
-   * @returns {object} { victory: boolean, score: number, targetScore: number, tokensEarned: number }
+   * @returns {object} { dice: array, baseScore: number, matchedCategory: object, targetScore: number }
    */
-  execute(round) {
+  executeRollPhase(round) {
     this._stepLog = [];
     this._cheating.resetRoundState();
     this._cheating.clearSealedPassive();
 
-    // Step 1: Load and show enemy info
+    // Step 1: Load enemy
     this._stepLog.push('step1_load_enemy');
     this._enemy.loadForRound(round);
     const targetScore = this._enemy.getTargetScore();
 
-    // Handle seal_passive rule (step 1 extension)
+    // Handle seal_passive rule
     if (this._enemy.hasSealPassiveRule()) {
       this._cheating.sealMostExpensivePassive();
     }
 
-    // Handle clone_dice passive (pre-roll setup)
     // Step 2: Roll dice
     this._stepLog.push('step2_roll_dice');
     this._rollWithClone();
@@ -79,11 +84,10 @@ class Combat {
     this._stepLog.push('step3_enemy_dice_rules');
     this._applyEnemyDiceRules();
 
-    // Step 4: Player consumables (simplified - no UI loop, just mark used)
-    // For testing, we'll allow external code to call useConsumable() directly
+    // Step 4: Consumables (skip here - player uses them in UI)
     this._stepLog.push('step4_consumables');
 
-    // Step 5: Passive floor (铅骰)
+    // Step 5: Passive floor
     this._stepLog.push('step5_passive_floor');
     this._applyPassiveFloor();
 
@@ -97,47 +101,92 @@ class Combat {
     this._stepLog.push('step7_base_score');
     const baseScore = this._calculateBase(this._dice.getValues(), matchedCategory);
 
-    // Step 8: Enemy scoring rules (zero_lowest)
+    // Step 8: Enemy scoring rules
     this._stepLog.push('step8_enemy_scoring_rules');
     let adjustedBase = baseScore;
     if (this._enemy.hasZeroLowestRule()) {
       adjustedBase = this._applyZeroLowest(this._dice.getValues(), baseScore);
     }
 
-    // Step 9-11: Bonus calculation and final score
-    this._stepLog.push('step9_10_11_bonuses');
-    const matchedCount = this._calcMatchedCount(matchedCategory, this._dice.getValues());
-    const flatBonus = this._cheating.getFlatBonuses(
+    // Store round info for UI access
+    this._currentRoundInfo = {
+      round,
+      targetScore,
       matchedCategory,
+      baseScore,
+      adjustedBase
+    };
+
+    return {
+      dice: this._dice.getDice(),
+      diceValues: this._dice.getValues(),
+      baseScore,
+      adjustedBase,
+      matchedCategory,
+      targetScore
+    };
+  }
+
+  /**
+   * Phase 2: Finalize result (steps 9-12).
+   * This applies passive bonuses and determines victory/defeat.
+   * Call this AFTER player has used consumables.
+   * @returns {object} { victory: boolean, score: number, targetScore: number, tokensEarned: number }
+   */
+  finalizeResult() {
+    const info = this._currentRoundInfo;
+    if (!info) {
+      throw new Error('Cannot finalize: executeRollPhase() must be called first');
+    }
+
+    // Steps 9-11: Bonus calculation and final score
+    this._stepLog.push('step9_10_11_bonuses');
+    const matchedCount = this._calcMatchedCount(info.matchedCategory, this._dice.getValues());
+    const flatBonus = this._cheating.getFlatBonuses(
+      info.matchedCategory,
       this._dice,
       matchedCount
     );
     const multiplier = this._cheating.getMultipliers();
-    const finalScore = Math.floor((adjustedBase + flatBonus) * multiplier);
+    const finalScore = Math.floor((info.adjustedBase + flatBonus) * multiplier);
 
     // Step 12: Victory determination
     this._stepLog.push('step12_victory_check');
-    const victory = finalScore >= targetScore;
+    const victory = finalScore >= info.targetScore;
     let tokensEarned = 0;
     if (victory) {
-      tokensEarned = this._economy.getRewardForRound(round);
+      tokensEarned = this._economy.getRewardForRound(info.round);
       this._economy.earn(tokensEarned);
     }
 
     this._result = {
       victory,
       score: finalScore,
-      targetScore,
+      targetScore: info.targetScore,
       tokensEarned,
-      round,
-      matchedCategory: matchedCategory.id,
-      baseScore,
-      adjustedBase,
+      round: info.round,
+      matchedCategory: info.matchedCategory.id,
+      baseScore: info.baseScore,
+      adjustedBase: info.adjustedBase,
       flatBonus,
       multiplier
     };
 
     return this._result;
+  }
+
+  /**
+   * Execute a full battle for the given round.
+   * This runs steps 1-12 in sequence.
+   * @param {number} round - round number (1-8)
+   * @returns {object} { victory: boolean, score: number, targetScore: number, tokensEarned: number }
+   */
+  execute(round) {
+    // Phase 1: Initial roll (steps 1-8)
+    this.executeRollPhase(round);
+
+    // Phase 2: Finalize result (steps 9-12)
+    return this.finalizeResult();
   }
 
   /**

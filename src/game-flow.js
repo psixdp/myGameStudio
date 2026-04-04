@@ -17,6 +17,7 @@ const GameState = {
   MENU: 'MENU',
   INITIALIZING: 'INITIALIZING',
   BATTLE: 'BATTLE',
+  ROLL_RESULT: 'ROLL_RESULT',  // 投掷后、确认前的中间状态
   SHOP: 'SHOP',
   VICTORY: 'VICTORY',
   DEFEAT: 'DEFEAT',
@@ -147,6 +148,7 @@ class GameFlow {
       cheating: this._cheating,
       dicePool: this._dicePool,
       shopStream,
+      enemy: this._enemy,
     });
 
     // Apply starting items (free consumable)
@@ -158,6 +160,9 @@ class GameFlow {
     // Reset game state
     this._round = 1;
     this._gameResult = null;
+
+    // Pre-load first enemy so UI can display info before first roll
+    this._enemy.loadForRound(this._round);
 
     // Transition to BATTLE
     this._state = GameState.BATTLE;
@@ -187,6 +192,62 @@ class GameFlow {
   // ---------------------------------------------------------------------------
   // Public API - Phase Control
   // ---------------------------------------------------------------------------
+
+  /**
+   * Phase 1: Execute roll phase only (steps 1-8).
+   * Returns roll result WITHOUT determining victory/defeat.
+   * Player can use consumables after seeing the result.
+   * @returns {object|null} roll result or null if invalid state
+   */
+  executeRollPhase() {
+    if (this._state !== GameState.BATTLE) {
+      return null;
+    }
+
+    const rollResult = this._combat.executeRollPhase(this._round);
+    this._state = GameState.ROLL_RESULT;
+    return rollResult;
+  }
+
+  /**
+   * Phase 2: Finalize battle result (steps 9-12).
+   * Applies bonuses, determines victory/defeat, and transitions state.
+   * @returns {object|null} final combat result or null if invalid state
+   */
+  finalizeBattle() {
+    if (this._state !== GameState.ROLL_RESULT) {
+      return null;
+    }
+
+    const result = this._combat.finalizeResult();
+
+    // Determine next state
+    if (result.victory) {
+      if (this._round >= this.getTotalRounds()) {
+        // Final victory
+        this._gameResult = {
+          result: 'VICTORY',
+          round: this._round,
+          score: result.score,
+        };
+        this._state = GameState.VICTORY;
+      } else {
+        // Enter shop
+        this._shop.open(this._round);
+        this._state = GameState.SHOP;
+      }
+    } else {
+      // Defeat
+      this._gameResult = {
+        result: 'DEFEAT',
+        round: this._round,
+        score: result.score,
+      };
+      this._state = GameState.DEFEAT;
+    }
+
+    return result;
+  }
 
   /**
    * Execute the battle for the current round.
@@ -240,6 +301,10 @@ class GameFlow {
 
     this._shop.close();
     this._round++;
+
+    // Pre-load enemy for the new round so UI can display info before roll
+    this._enemy.loadForRound(this._round);
+
     this._state = GameState.BATTLE;
     return true;
   }

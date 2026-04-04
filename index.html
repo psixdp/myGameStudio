@@ -33,8 +33,11 @@
 
       <!-- 分数显示 -->
       <div class="score-display">
-        <span>分数: <strong id="current-score">0</strong></span>
-        <span class="category" id="category-name">散牌</span>
+        <span class="score-comparison">
+          <strong id="current-score">0</strong> / <span id="target-score-display">8</span>
+        </span>
+        <span id="result-status" class="result-status"></span>
+        <span class="category" id="category-name">准备投掷</span>
       </div>
     </section>
 
@@ -45,15 +48,29 @@
         <!-- 消耗品将动态生成 -->
       </div>
 
+      <!-- 消耗品预览 -->
+      <div id="consumable-preview" class="consumable-preview hidden">
+        <div class="consumable-preview-name" id="consumable-preview-name">-</div>
+        <div class="consumable-preview-desc" id="consumable-preview-desc">-</div>
+        <div class="consumable-preview-effect" id="consumable-preview-effect"></div>
+      </div>
+
       <h3 style="margin-top: 15px;">⚡ 被动能力</h3>
       <div id="passives-list" class="passives-list">
         <!-- 被动能力将动态生成 -->
+      </div>
+
+      <!-- 被动能力预览 -->
+      <div id="passive-preview" class="passive-preview hidden">
+        <div class="passive-preview-name" id="passive-preview-name">-</div>
+        <div class="passive-preview-desc" id="passive-preview-desc">-</div>
       </div>
     </section>
 
     <!-- 操作按钮 -->
     <section class="actions">
       <button id="btn-roll" class="btn-primary">🎲 投掷</button>
+      <button id="btn-confirm-result" class="btn-confirm hidden">📋 查看结果</button>
       <button id="btn-use-consumable" class="btn-secondary">📦 使用消耗品</button>
     </section>
 
@@ -63,6 +80,12 @@
         <h2>🏪 商店</h2>
         <div id="shop-tokens" style="text-align: center; margin-bottom: 10px; color: #f39c12;">
           Tokens: <strong>0</strong>
+        </div>
+        <div id="next-enemy-preview" class="next-enemy-preview">
+          <h4>下一关敌人</h4>
+          <div id="next-enemy-name" class="next-enemy-name">-</div>
+          <div id="next-enemy-target" class="next-enemy-target">目标: -</div>
+          <div id="next-enemy-rules" class="next-enemy-rules"></div>
         </div>
         <div id="shop-items" class="shop-items">
           <!-- 商店物品将动态生成 -->
@@ -81,6 +104,8 @@
         <div class="gameover-stats">
           <p>最终轮次: <span id="final-round">1</span></p>
           <p>最终分数: <span id="final-score">0</span></p>
+          <p>击败敌人: <span id="enemies-defeated">0</span></p>
+          <p>剩余代币: <span id="total-tokens">0</span></p>
         </div>
         <p id="gameover-message">再接再厉！</p>
         <button id="btn-restart" class="btn-primary">再来一局</button>

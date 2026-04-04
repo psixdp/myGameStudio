@@ -8,6 +8,7 @@ import { Economy } from '../src/economy.js';
 import { CheatingAbilities } from '../src/cheating.js';
 import { DicePool } from '../src/dice.js';
 import { RNG } from '../src/rng.js';
+import { Enemy } from '../src/enemy.js';
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -48,6 +49,7 @@ function makeShopDeps(overrides = {}) {
   const shopStream = rng.getStream('shop');
   const cloneStream = rng.getStream('clone');
   const diceStream = rng.getStream('dice');
+  const enemyStream = rng.getStream('enemy');
 
   const economy = new Economy({ dataConfig });
 
@@ -66,15 +68,21 @@ function makeShopDeps(overrides = {}) {
     cloneStream,
   });
 
+  const enemy = new Enemy({
+    dataConfig,
+    enemyStream,
+  });
+
   const shop = new Shop({
     dataConfig,
     economy,
     cheating,
     dicePool,
     shopStream,
+    enemy,
   });
 
-  return { shop, economy, cheating, dicePool, dataConfig, rng };
+  return { shop, economy, cheating, dicePool, dataConfig, rng, enemy };
 }
 
 // ---------------------------------------------------------------------------
