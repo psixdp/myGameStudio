@@ -289,9 +289,9 @@ if (hasPassive('clone_dice')):
 | 牌型大师费用 | 4 | 3-5 | 高级分类加成的价值 | abilities.json |
 | 备用骰费用 | 4 | 3-5 | 骰子扩展的价值 | abilities.json |
 | 千王骰费用 | 6 | 4-8 | 带初始值的骰子扩展 | abilities.json |
-| 连横术每颗加成 | +3 | 1-5 | 连横术收益 | abilities.json |
-| 牌型大师加成 | +10 | 5-20 | 高级分类额外价值 | abilities.json |
-| 贪欲倍率 | ×1.2 | ×1.1-×1.5 | 全局放大 | abilities.json |
+| 连横术每颗加成 | +5 | 1-7 | 连横术收益 | abilities.json |
+| 牌型大师加成 | +20 | 5-25 | 高级分类额外价值（满堂红/豹子/三条） | abilities.json |
+| 贪欲倍率 | ×2.0 | ×1.2-×2.0 | 全局放大 | abilities.json |
 | 初始免费消耗品 | 1个换面 | 0-2 | 新手友好度 | global-config.json |
 
 ## Acceptance Criteria

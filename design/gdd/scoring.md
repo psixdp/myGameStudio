@@ -195,7 +195,7 @@ flatBonus = Σ (passive.flatBonus where passive.category == matched OR passive.c
 ```
 
 加法加成的触发条件：
-- 牌型大师：仅当匹配满堂红或豹子时生效（+10）
+- 牌型大师：仅当匹配满堂红、豹子或三条时生效（+20）
 - 连横术：当匹配三条/对子/满堂红时，超出部分的加成
 
 ### 连横术加成计算
@@ -208,7 +208,7 @@ else:
     matchedCount = max_frequency(diceValues)   // 匹配值出现的次数
     requiredCount = category.matchCount        // 分类最低要求
     excessCount = max(0, matchedCount - requiredCount)
-    linkBonus = excessCount * 3
+    linkBonus = excessCount * 5
 ```
 
 豹子要求所有骰子一致，不存在"超出最低要求"的骰子，因此连横术对豹子加成固定为 0。
@@ -300,9 +300,9 @@ function bestPairValue(diceValues):
 | 满堂红奖励分 | +15 | 10-25 | 满堂红价值 | scoring-categories.json |
 | 大顺奖励分 | +20 | 15-30 | 大顺价值 | scoring-categories.json |
 | 豹子倍率 | ×3 | ×2-×5 | 豹子爆发力 | scoring-categories.json |
-| 连横术每颗加成 | +3 | 1-5 | 连横术价值 | abilities.json |
-| 牌型大师加成 | +10 | 5-20 | 满堂红/豹子额外价值 | abilities.json |
-| 贪欲倍率 | ×1.2 | ×1.1-×1.5 | 全局乘法放大 | abilities.json |
+| 连横术每颗加成 | +5 | 1-7 | 连横术价值 | abilities.json |
+| 牌型大师加成 | +20 | 5-25 | 满堂红/豹子/三条额外价值 | abilities.json |
+| 贪欲倍率 | ×2.0 | ×1.2-×2.0 | 全局乘法放大 | abilities.json |
 | 最低分保底 | 0 | 0-5 | 防止负分 | 硬编码 |
 
 ## Acceptance Criteria
