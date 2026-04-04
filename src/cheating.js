@@ -286,4 +286,4 @@ class CheatingAbilities {
   }
 }
 
-module.exports = { CheatingAbilities };
+export { CheatingAbilities };

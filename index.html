@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>千王骰局</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部信息栏 -->
+    <header class="game-header">
+      <h1>🎲 千王骰局</h1>
+      <div class="stats">
+        <span id="round-display">Round <strong>1</strong>/8</span>
+        <span id="tokens-display">Tokens: <strong>5</strong></span>
+      </div>
+    </header>
+
+    <!-- 敌人信息面板 -->
+    <section class="enemy-panel">
+      <h2 id="enemy-name">街头混混</h2>
+      <div class="target-score">目标: <span id="target-score">8</span> 分</div>
+      <div id="enemy-rules" class="enemy-rules"></div>
+    </section>
+
+    <!-- 战斗区域 -->
+    <section class="battle-area">
+      <!-- 骰子容器 -->
+      <div id="dice-container" class="dice-container">
+        <!-- 骰子将动态生成 -->
+      </div>
+
+      <!-- 分数显示 -->
+      <div class="score-display">
+        <span>分数: <strong id="current-score">0</strong></span>
+        <span class="category" id="category-name">散牌</span>
+      </div>
+    </section>
+
+    <!-- 库存面板 -->
+    <section class="inventory-panel">
+      <h3>🎒 消耗品</h3>
+      <div id="consumables-list" class="consumables-list">
+        <!-- 消耗品将动态生成 -->
+      </div>
+
+      <h3 style="margin-top: 15px;">⚡ 被动能力</h3>
+      <div id="passives-list" class="passives-list">
+        <!-- 被动能力将动态生成 -->
+      </div>
+    </section>
+
+    <!-- 操作按钮 -->
+    <section class="actions">
+      <button id="btn-roll" class="btn-primary">🎲 投掷</button>
+      <button id="btn-use-consumable" class="btn-secondary">📦 使用消耗品</button>
+    </section>
+
+    <!-- 商店遮罩（默认隐藏） -->
+    <div id="shop-overlay" class="overlay hidden">
+      <div class="shop-content">
+        <h2>🏪 商店</h2>
+        <div id="shop-tokens" style="text-align: center; margin-bottom: 10px; color: #f39c12;">
+          Tokens: <strong>0</strong>
+        </div>
+        <div id="shop-items" class="shop-items">
+          <!-- 商店物品将动态生成 -->
+        </div>
+        <div class="shop-actions">
+          <button id="btn-refresh-shop" class="btn-secondary">刷新 (1代币)</button>
+          <button id="btn-close-shop" class="btn-primary">离开</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 游戏结束遮罩（默认隐藏） -->
+    <div id="gameover-overlay" class="overlay hidden">
+      <div class="gameover-content">
+        <h2 id="gameover-title">游戏结束</h2>
+        <div class="gameover-stats">
+          <p>最终轮次: <span id="final-round">1</span></p>
+          <p>最终分数: <span id="final-score">0</span></p>
+        </div>
+        <p id="gameover-message">再接再厉！</p>
+        <button id="btn-restart" class="btn-primary">再来一局</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { GameUI } from './src/ui.js';
+
+    // 初始化游戏
+    const game = new GameUI();
+    game.init().catch(err => {
+      console.error('Failed to initialize game:', err);
+      document.getElementById('app').innerHTML = `
+        <div style="text-align: center; padding: 50px;">
+          <h2>加载失败</h2>
+          <p>请确保在服务器环境下运行此游戏</p>
+          <p style="color: #aaa; font-size: 14px;">(例如使用 python -m http.server 或 npx serve)</p>
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>

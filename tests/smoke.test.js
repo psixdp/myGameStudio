@@ -1,15 +1,20 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { RNG } = require('../src/rng');
-const { DicePool } = require('../src/dice');
-const { ScoringEngine } = require('../src/scoring');
-const { DataConfig } = require('../src/data-config');
-const path = require('path');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { RNG } from '../src/rng.js';
+import { DicePool } from '../src/dice.js';
+import { ScoringEngine } from '../src/scoring.js';
+import { DataConfig } from '../src/data-config.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, '..', 'assets', 'data');
-const config = new DataConfig().load(DATA_DIR);
+const config = new DataConfig();
+await config.load(DATA_DIR);
 const categories = config.getCategories();
 const globalCfg = config.getGlobal();
 

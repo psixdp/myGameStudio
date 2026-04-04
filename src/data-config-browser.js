@@ -1,76 +1,17 @@
 'use strict';
 
+import { DATA } from './data-bundle.js';
+
 /**
- * DataConfig — loads and validates all JSON config files at startup,
- * then provides a read-only query interface for other game systems.
+ * DataConfig — loads and validates all JSON config data at startup.
+ *
+ * Browser version: data is bundled inline (generated from data-bundle.js).
  */
 class DataConfig {
   constructor() {
-    this._data = {};
+    this._data = DATA;
     this._warnings = [];
-  }
-
-  /**
-   * Load all JSON config files from the given directory.
-   * In browser: uses data-bundle.js (inline data), in Node.js: uses fs.
-   * @param {string} dataDir - path to assets/data/
-   * @returns {Promise<DataConfig>} this (for chaining)
-   */
-  async load(dataDir) {
-    // Browser environment - try to use data bundle first
-    if (typeof window !== 'undefined') {
-      try {
-        const { DATA } = await import('./data-bundle.js');
-        // Convert DATA bundle to internal format
-        this._data.globalConfig = DATA.globalConfig;
-        this._data.scoringCategories = DATA.scoringCategories;
-        this._data.abilities = DATA.abilities;
-        this._data.enemies = DATA.enemies;
-        this._data.enemyRules = DATA.enemyRules;
-        this._data.economy = DATA.economy;
-      } catch (e) {
-        // Fallback to fetch if data bundle is not available
-        const files = [
-          'global-config.json',
-          'scoring-categories.json',
-          'abilities.json',
-          'enemies.json',
-          'enemy-rules.json',
-          'economy.json',
-        ];
-        for (const file of files) {
-          const response = await fetch(`${dataDir}/${file}`);
-          if (!response.ok) {
-            throw new Error(`Failed to load ${file}: ${response.statusText}`);
-          }
-          const parsed = await response.json();
-          const key = file.replace('.json', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          this._data[key] = parsed;
-        }
-      }
-    } else {
-      // Node.js environment - use dynamic import for fs and path
-      const { readFileSync } = await import('fs');
-      const { join } = await import('path');
-      const files = [
-        'global-config.json',
-        'scoring-categories.json',
-        'abilities.json',
-        'enemies.json',
-        'enemy-rules.json',
-        'economy.json',
-      ];
-      for (const file of files) {
-        const filePath = join(dataDir, file);
-        const raw = readFileSync(filePath, 'utf-8');
-        const parsed = JSON.parse(raw);
-        const key = file.replace('.json', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-        this._data[key] = parsed;
-      }
-    }
-
     this._buildIndices();
-    return this;
   }
 
   /** Build lookup indices for fast querying. */
@@ -81,9 +22,7 @@ class DataConfig {
     for (const a of this._data.abilities) {
       if (this._abilityById[a.id]) this._warnings.push(`Duplicate id "${a.id}" in abilities`);
       this._abilityById[a.id] = a;
-      if (!this._abilitiesByType[a.type]) {
-        this._abilitiesByType[a.type] = [];
-      }
+      if (!this._abilitiesByType[a.type]) this._abilitiesByType[a.type] = [];
       this._abilitiesByType[a.type].push(a);
     }
 
@@ -131,7 +70,7 @@ class DataConfig {
 
   /** Get a single scoring category by id. */
   getCategory(id) {
-    return this._categoryById[id] || null;
+    return this._categoryById[id] ? { ...this._categoryById[id] } : null;
   }
 
   /** Get abilities, optionally filtered by type. */
@@ -211,14 +150,9 @@ class DataConfig {
     return [...this._warnings];
   }
 
-  /**
-   * Load from raw data objects (for testing without filesystem).
-   * @param {object} dataMap - keys are file stems, values are parsed objects
-   * @returns {DataConfig} this
-   */
-  loadFromObject(dataMap) {
-    this._data = dataMap;
-    this._buildIndices();
+  /** Browser version: data is bundled at construction time. */
+  load() {
+    // No-op for browser version
     return this;
   }
 }

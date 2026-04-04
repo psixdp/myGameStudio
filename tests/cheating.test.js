@@ -1,11 +1,11 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { CheatingAbilities } = require('../src/cheating');
-const { DataConfig } = require('../src/data-config');
-const { Economy } = require('../src/economy');
-const { RNG } = require('../src/rng');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { CheatingAbilities } from '../src/cheating.js';
+import { DataConfig } from '../src/data-config.js';
+import { Economy } from '../src/economy.js';
+import { RNG } from '../src/rng.js';
 
 // Helpers
 function makeCheatingSystem() {

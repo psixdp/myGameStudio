@@ -107,4 +107,4 @@ class Economy {
   }
 }
 
-module.exports = { Economy };
+export { Economy };

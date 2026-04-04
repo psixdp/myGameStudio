@@ -1,14 +1,14 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { Combat } = require('../src/combat');
-const { DicePool } = require('../src/dice');
-const { Enemy } = require('../src/enemy');
-const { CheatingAbilities } = require('../src/cheating');
-const { Economy } = require('../src/economy');
-const { RNG } = require('../src/rng');
-const { DataConfig } = require('../src/data-config');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { Combat } from '../src/combat.js';
+import { DicePool } from '../src/dice.js';
+import { Enemy } from '../src/enemy.js';
+import { CheatingAbilities } from '../src/cheating.js';
+import { Economy } from '../src/economy.js';
+import { RNG } from '../src/rng.js';
+import { DataConfig } from '../src/data-config.js';
 
 // Helpers
 function makeCombatSystem(seed = 42) {

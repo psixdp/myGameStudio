@@ -1,0 +1,466 @@
+/* 千王骰局 - 主样式表 */
+
+/* ==================== 全局重置 ==================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #eee;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ==================== 应用容器 ==================== */
+#app {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* ==================== 头部 ==================== */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.game-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.stats {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  color: #aaa;
+}
+
+.stats span strong {
+  color: #2ecc71;
+}
+
+/* ==================== 敌人面板 ==================== */
+.enemy-panel {
+  background: rgba(15, 52, 96, 0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+}
+
+.enemy-panel h2 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.target-score {
+  font-size: 18px;
+  color: #2ecc71;
+}
+
+.enemy-rules {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(243, 156, 18, 0.1);
+  border-left: 3px solid #f39c12;
+  font-size: 13px;
+  color: #f39c12;
+}
+
+.enemy-rules:empty {
+  display: none;
+}
+
+/* ==================== 战斗区域 ==================== */
+.battle-area {
+  margin-bottom: 20px;
+}
+
+/* 骰子容器 */
+.dice-container {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  padding: 20px 0;
+}
+
+/* 单个骰子 */
+.die {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(145deg, #ffffff, #e0e0e0);
+  color: #333;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: bold;
+  box-shadow:
+    0 4px 6px rgba(0,0,0,0.3),
+    inset 0 -2px 4px rgba(0,0,0,0.1),
+    inset 0 2px 4px rgba(255,255,255,0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
+  user-select: none;
+}
+
+.die:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 12px rgba(0,0,0,0.4),
+    inset 0 -2px 4px rgba(0,0,0,0.1),
+    inset 0 2px 4px rgba(255,255,255,0.5);
+}
+
+/* 骰子滚动动画 */
+.die.rolling {
+  animation: roll 0.5s ease-out;
+}
+
+@keyframes roll {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(90deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.15);
+  }
+  75% {
+    transform: rotate(270deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* 临时骰子（分身术） */
+.die.temp {
+  background: linear-gradient(145deg, #ffd700, #ffb700);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* 分数显示 */
+.score-display {
+  text-align: center;
+  font-size: 18px;
+  padding: 15px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+}
+
+.score-display strong {
+  color: #2ecc71;
+  font-size: 24px;
+}
+
+.score-display .category {
+  color: #f39c12;
+  font-size: 14px;
+}
+
+/* ==================== 库存面板 ==================== */
+.inventory-panel {
+  background: rgba(15, 52, 96, 0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+}
+
+.inventory-panel h3 {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.consumables-list,
+.passives-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.consumables-list:empty::after,
+.passives-list:empty::after {
+  content: "（空）";
+  color: #666;
+  font-style: italic;
+}
+
+/* 物品卡片 */
+.item-card {
+  background: rgba(15, 52, 96, 0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item-card:hover {
+  background: rgba(26, 75, 140, 0.8);
+  border-color: rgba(255,255,255,0.3);
+}
+
+.item-card.selected {
+  background: rgba(233, 69, 96, 0.5);
+  border-color: #e94560;
+}
+
+.item-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.item-card .cost {
+  color: #f39c12;
+  font-weight: bold;
+}
+
+/* ==================== 操作按钮 ==================== */
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #e94560, #d63d56);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff6b81, #e94560);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(233, 69, 96, 0.5);
+}
+
+.btn-secondary {
+  background: rgba(15, 52, 96, 0.8);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(26, 75, 140, 0.8);
+  border-color: rgba(255,255,255,0.4);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ==================== 遮罩层 ==================== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+/* ==================== 商店 ==================== */
+.shop-content,
+.gameover-content {
+  background: linear-gradient(135deg, #16213e, #1a1a2e);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 450px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.shop-content h2,
+.gameover-content h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.shop-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.shop-item {
+  background: rgba(15, 52, 96, 0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shop-item:hover {
+  background: rgba(26, 75, 140, 0.5);
+  border-color: rgba(255,255,255,0.3);
+}
+
+.shop-item.sold {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.shop-item-info {
+  flex: 1;
+}
+
+.shop-item-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.shop-item-desc {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.shop-item-cost {
+  background: rgba(243, 156, 18, 0.2);
+  color: #f39c12;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.shop-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.shop-actions button {
+  flex: 1;
+}
+
+/* ==================== 游戏结束 ==================== */
+.gameover-content {
+  text-align: center;
+}
+
+.gameover-content h2 {
+  font-size: 32px;
+}
+
+.gameover-content.victory h2 {
+  color: #2ecc71;
+}
+
+.gameover-content.defeat h2 {
+  color: #e94560;
+}
+
+.gameover-content p {
+  font-size: 16px;
+  color: #aaa;
+  margin: 20px 0;
+}
+
+.gameover-stats {
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 15px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.gameover-stats p {
+  margin: 8px 0;
+  color: #eee;
+}
+
+/* ==================== 工具类 ==================== */
+.hidden {
+  display: none !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-green {
+  color: #2ecc71;
+}
+
+.text-red {
+  color: #e94560;
+}
+
+.text-yellow {
+  color: #f39c12;
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 480px) {
+  #app {
+    padding: 15px;
+  }
+
+  .dice-container {
+    gap: 8px;
+  }
+
+  .die {
+    width: 52px;
+    height: 52px;
+    font-size: 24px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions button {
+    width: 100%;
+  }
+}

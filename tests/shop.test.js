@@ -1,13 +1,13 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { Shop } = require('../src/shop');
-const { DataConfig } = require('../src/data-config');
-const { Economy } = require('../src/economy');
-const { CheatingAbilities } = require('../src/cheating');
-const { DicePool } = require('../src/dice');
-const { RNG } = require('../src/rng');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { Shop } from '../src/shop.js';
+import { DataConfig } from '../src/data-config.js';
+import { Economy } from '../src/economy.js';
+import { CheatingAbilities } from '../src/cheating.js';
+import { DicePool } from '../src/dice.js';
+import { RNG } from '../src/rng.js';
 
 // ---------------------------------------------------------------------------
 // Test data

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "千王骰局 — Roguelike dice builder game",
   "private": true,
+  "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js"
   }

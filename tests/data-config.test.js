@@ -1,15 +1,21 @@
 'use strict';
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { DataConfig } = require('../src/data-config');
-const path = require('path');
+import { describe, it, before } from 'node:test';
+import assert from 'node:assert/strict';
+import { DataConfig } from '../src/data-config.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, '..', 'assets', 'data');
 
 // Helper: create a config from the real data files
-function loadReal() {
-  return new DataConfig().load(DATA_DIR);
+async function loadReal() {
+  const config = new DataConfig();
+  await config.load(DATA_DIR);
+  return config;
 }
 
 // Helper: create a config from arbitrary data (for edge case tests)
@@ -35,8 +41,8 @@ function minimalData(overrides = {}) {
 // AC-1: All JSON files parse correctly
 // ============================================================
 describe('AC-1: JSON parsing', () => {
-  it('loads all 6 config files without error', () => {
-    const config = loadReal();
+  it('loads all 6 config files without error', async () => {
+    const config = await loadReal();
     assert.ok(config.getGlobal());
     assert.ok(config.getCategories().length > 0);
     assert.ok(config.getAbilities().length > 0);
@@ -49,8 +55,8 @@ describe('AC-1: JSON parsing', () => {
 // AC-2: Reference integrity — enemy rules IDs all exist
 // ============================================================
 describe('AC-2: Reference integrity', () => {
-  it('all enemy rule references are valid', () => {
-    const config = loadReal();
+  it('all enemy rule references are valid', async () => {
+    const config = await loadReal();
     const errors = config.validate();
     for (const e of errors) {
       assert.ok(!e.includes('unknown rule'), `Reference error: ${e}`);
@@ -98,28 +104,28 @@ describe('AC-3: Duplicate ID handling', () => {
 // AC-4: Unified query interface returns correct data
 // ============================================================
 describe('AC-4: Unified query interface', () => {
-  it('get() returns nested values by dot path', () => {
-    const config = loadReal();
+  it('get() returns nested values by dot path', async () => {
+    const config = await loadReal();
     assert.equal(config.get('globalConfig.dice.initialCount'), 4);
     assert.equal(config.get('globalConfig.dice.maxCount'), 7);
     assert.equal(config.get('globalConfig.battle.consumablesPerRound'), 2);
   });
 
-  it('get() returns undefined for missing paths', () => {
-    const config = loadReal();
+  it('get() returns undefined for missing paths', async () => {
+    const config = await loadReal();
     assert.equal(config.get('nonexistent.path'), undefined);
     assert.equal(config.get('globalConfig.dice.noSuchField'), undefined);
   });
 
-  it('getCategories() returns categories sorted by priority', () => {
-    const config = loadReal();
+  it('getCategories() returns categories sorted by priority', async () => {
+    const config = await loadReal();
     const cats = config.getCategories();
     assert.equal(cats[0].id, 'yahtzee'); // priority 1
     assert.equal(cats[cats.length - 1].id, 'bust'); // priority 7
   });
 
-  it('getAbilities(type) filters correctly', () => {
-    const config = loadReal();
+  it('getAbilities(type) filters correctly', async () => {
+    const config = await loadReal();
     const consumables = config.getAbilities('consumable');
     const passives = config.getAbilities('passive');
     const expansions = config.getAbilities('dice_expansion');
@@ -128,15 +134,15 @@ describe('AC-4: Unified query interface', () => {
     assert.equal(expansions.length, 2);
   });
 
-  it('getEnemy(round) returns correct enemy', () => {
-    const config = loadReal();
+  it('getEnemy(round) returns correct enemy', async () => {
+    const config = await loadReal();
     assert.equal(config.getEnemy(1).name, '街头混混');
     assert.equal(config.getEnemy(8).name, '千王之王');
     assert.equal(config.getEnemy(9), null);
   });
 
-  it('getEnemyRule(id) returns correct rule', () => {
-    const config = loadReal();
+  it('getEnemyRule(id) returns correct rule', async () => {
+    const config = await loadReal();
     assert.equal(config.getEnemyRule('block_pair').name, '封锁对子');
     assert.equal(config.getEnemyRule('nonexistent'), null);
   });
@@ -187,8 +193,8 @@ describe('AC-6: Empty config graceful degradation', () => {
 // AC-7: Bust category always exists and is fallback
 // ============================================================
 describe('AC-7: Bust fallback category', () => {
-  it('bust category exists with matchType=fallback', () => {
-    const config = loadReal();
+  it('bust category exists with matchType=fallback', async () => {
+    const config = await loadReal();
     const bust = config.getCategory('bust');
     assert.ok(bust);
     assert.equal(bust.matchType, 'fallback');
@@ -225,7 +231,11 @@ describe('AC-7: Bust fallback category', () => {
 // C30 parameter verification
 // ============================================================
 describe('C30 balance parameters', () => {
-  const config = loadReal();
+  let config;
+
+  before(async () => {
+    config = await loadReal();
+  });
 
   it('initial dice count = 4', () => {
     assert.equal(config.get('globalConfig.dice.initialCount'), 4);
