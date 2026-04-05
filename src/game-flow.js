@@ -250,6 +250,18 @@ class GameFlow {
   }
 
   /**
+   * Recalculate roll result after consumables modify dice.
+   * Must be in ROLL_RESULT state.
+   * @returns {object|null} updated roll result or null if invalid state
+   */
+  recalculateRollResult() {
+    if (this._state !== GameState.ROLL_RESULT) {
+      return null;
+    }
+    return this._combat.recalculateFromCurrentDice();
+  }
+
+  /**
    * Execute the battle for the current round.
    * Must be in BATTLE state.
    * @returns {object|null} combat result or null if invalid state
@@ -301,6 +313,9 @@ class GameFlow {
 
     this._shop.close();
     this._round++;
+
+    // Clear previous round's combat result so UI doesn't show stale data
+    this._combat.reset();
 
     // Pre-load enemy for the new round so UI can display info before roll
     this._enemy.loadForRound(this._round);

@@ -51,6 +51,8 @@ class GameUI {
       // Enemy
       enemyName: document.getElementById('enemy-name'),
       targetScore: document.getElementById('target-score'),
+      weaknessDisplay: document.getElementById('weakness-display'),
+      weaknessCategory: document.getElementById('weakness-category'),
       enemyRules: document.getElementById('enemy-rules'),
 
       // Battle
@@ -149,6 +151,7 @@ class GameUI {
     const total = this._gameFlow.getTotalRounds();
     const economy = this._gameFlow.getEconomy();
     const enemy = this._gameFlow.getEnemy();
+    const cheating = this._gameFlow.getCheating();
 
     // 顶部信息
     this._elements.roundDisplay.innerHTML = `Round <strong>${round}</strong>/${total}`;
@@ -157,6 +160,7 @@ class GameUI {
     // 敌人信息
     this._elements.enemyName.textContent = enemy.getName();
     this._elements.targetScore.textContent = enemy.getTargetScore();
+    this._renderWeakness(cheating);
     this._renderEnemyRules(enemy);
 
     // 骰子（显示投掷后的结果）
@@ -178,7 +182,6 @@ class GameUI {
     this._elements.categoryName.textContent = this._getCategoryDisplayName(result.matchedCategory.id);
 
     // 消耗品和被动
-    const cheating = this._gameFlow.getCheating();
     this._renderConsumables(cheating.getConsumables());
     this._renderPassives(cheating.getPassives());
 
@@ -203,6 +206,7 @@ class GameUI {
     // 敌人信息
     this._elements.enemyName.textContent = enemy.getName();
     this._elements.targetScore.textContent = enemy.getTargetScore();
+    this._renderWeakness(cheating);
     this._renderEnemyRules(enemy);
 
     // 骰子
@@ -255,6 +259,17 @@ class GameUI {
     // 隐藏遮罩
     this._elements.shopOverlay.classList.add('hidden');
     this._elements.gameoverOverlay.classList.add('hidden');
+  }
+
+  /** 渲染敌人规则 */
+  _renderWeakness(cheating) {
+    const weaknessCategory = cheating.getWeaknessCategory();
+    if (weaknessCategory) {
+      this._elements.weaknessDisplay.classList.remove('hidden');
+      this._elements.weaknessCategory.textContent = this._getCategoryDisplayName(weaknessCategory);
+    } else {
+      this._elements.weaknessDisplay.classList.add('hidden');
+    }
   }
 
   /** 渲染敌人规则 */
@@ -657,6 +672,9 @@ class GameUI {
       }
 
       this._showToast(effectMessage);
+
+      // 重新计算分数并更新缓存的结果
+      this._pendingRollResult = this._gameFlow.recalculateRollResult();
 
       // 重置选择状态
       this._selectedConsumableIndex = null;

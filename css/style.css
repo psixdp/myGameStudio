@@ -68,6 +68,25 @@ body {
   color: #2ecc71;
 }
 
+/* 弱点分类显示 */
+.weakness-display {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(52, 152, 219, 0.15);
+  border-left: 3px solid #3498db;
+  font-size: 13px;
+  color: #3498db;
+}
+
+.weakness-display.hidden {
+  display: none;
+}
+
+.weakness-display #weakness-category {
+  font-weight: bold;
+  color: #5dade2;
+}
+
 .enemy-rules {
   margin-top: 10px;
   padding: 8px 12px;
@@ -379,8 +398,15 @@ button:disabled {
   transform: none !important;
 }
 
-/* 查看结果按钮 */
+/* 查看结果按钮 - 继承基础按钮样式 */
 .btn-confirm {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
   background: linear-gradient(135deg, #3498db, #2980b9);
   color: #fff;
   box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
