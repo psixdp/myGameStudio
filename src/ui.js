@@ -58,8 +58,7 @@ class GameUI {
       // Battle
       diceContainer: document.getElementById('dice-container'),
       diceBowl: document.getElementById('dice-bowl'),
-      bowlTop: null, // Will be cached when bowl is created
-      bowlBody: null,
+      bowlStatusText: document.getElementById('bowl-status-text'),
       currentScore: document.getElementById('current-score'),
       targetScoreDisplay: document.getElementById('target-score-display'),
       resultStatus: document.getElementById('result-status'),
@@ -123,6 +122,8 @@ class GameUI {
     if (!this._isPostRollState(state)) {
       this._isSelectingTarget = false;
       this._selectedDieIndex = null;
+      this._elements.diceBowl.classList.add('hidden');
+      this._elements.diceBowl.classList.remove('covered', 'revealing');
     }
 
     switch (state) {
@@ -581,7 +582,7 @@ class GameUI {
     const rollResult = this._gameFlow.executeRollPhase();
 
     // 显示碗盖扣下动画
-    await this._showBowlCover();
+    await this._showBowlStatus();
 
     // 存储投掷结果用于显示（此时还未判定胜负）
     this._pendingRollResult = rollResult;
@@ -589,42 +590,41 @@ class GameUI {
     this._render();  // 将显示分数对比和可使用消耗品
   }
 
-  /** 显示碗盖扣下动画 */
-  async _showBowlCover() {
+  /** 显示“可出千”状态徽标（不遮挡 UI） */
+  async _showBowlStatus() {
     this._elements.diceBowl.classList.remove('hidden');
+    this._elements.diceBowl.classList.remove('revealing');
+    this._elements.diceBowl.classList.add('covered');
 
-    // 缓存碗盖元素
-    if (!this._elements.bowlTop) {
-      this._elements.bowlTop = this._elements.diceBowl.querySelector('.bowl-top');
-      this._elements.bowlBody = this._elements.diceBowl.querySelector('.bowl-body');
+    if (this._elements.bowlStatusText) {
+      this._elements.bowlStatusText.textContent = '盖碗中 · 可出千';
     }
 
-    // 等待扣下动画完成
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 180));
   }
 
-  /** 掀开碗盖动画 */
-  async _liftBowlCover() {
-    if (!this._elements.bowlTop || !this._elements.bowlBody) return;
+  /** 隐藏“可出千”状态徽标（揭晓时） */
+  async _hideBowlStatus() {
+    if (this._elements.diceBowl.classList.contains('hidden')) return;
 
-    // 添加掀开动画类
-    this._elements.bowlTop.classList.add('lifting');
-    this._elements.bowlBody.classList.add('lifting');
+    this._elements.diceBowl.classList.remove('covered');
+    this._elements.diceBowl.classList.add('revealing');
 
-    // 等待掀开动画完成
-    await new Promise(resolve => setTimeout(resolve, 600));
+    if (this._elements.bowlStatusText) {
+      this._elements.bowlStatusText.textContent = '揭晓中...';
+    }
 
-    // 隐藏碗盖并重置动画
+    await new Promise(resolve => setTimeout(resolve, 220));
+
     this._elements.diceBowl.classList.add('hidden');
-    this._elements.bowlTop.classList.remove('lifting');
-    this._elements.bowlBody.classList.remove('lifting');
+    this._elements.diceBowl.classList.remove('covered', 'revealing');
   }
 
   /** 确认结果 - 进入最终结算 */
   async _onConfirmResult() {
     // 揭晓时刻：先掀开碗盖，再结算
     if (!this._elements.diceBowl.classList.contains('hidden')) {
-      await this._liftBowlCover();
+      await this._hideBowlStatus();
     }
 
     // Phase 2: 通过 GameFlow 完成最终结算并转换状态
