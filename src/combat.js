@@ -323,6 +323,53 @@ class Combat {
   }
 
   /**
+   * Recalculate score based on current dice state (without re-rolling).
+   * Called after consumables modify dice.
+   * @returns {object} { dice: array, diceValues: array, baseScore: number, adjustedBase: number, matchedCategory: object, targetScore: number }
+   */
+  recalculateFromCurrentDice() {
+    const info = this._currentRoundInfo;
+    if (!info) {
+      throw new Error('Cannot recalculate: executeRollPhase() must be called first');
+    }
+
+    // Apply passive floor again (in case dice were modified below floor)
+    this._applyPassiveFloor();
+
+    // Re-match category with current dice values
+    const blockedCategories = this._enemy.getBlockedCategories();
+    const categories = this._dataConfig.getCategories();
+    const matchedCategory = this._matchCategory(this._dice.getValues(), categories, blockedCategories);
+
+    // Re-calculate base score
+    const baseScore = this._calculateBase(this._dice.getValues(), matchedCategory);
+
+    // Apply enemy scoring rules (zero_lowest)
+    let adjustedBase = baseScore;
+    if (this._enemy.hasZeroLowestRule()) {
+      adjustedBase = this._applyZeroLowest(this._dice.getValues(), baseScore);
+    }
+
+    // Update current round info
+    this._currentRoundInfo = {
+      round: info.round,
+      targetScore: info.targetScore,
+      matchedCategory,
+      baseScore,
+      adjustedBase
+    };
+
+    return {
+      dice: this._dice.getDice(),
+      diceValues: this._dice.getValues(),
+      baseScore,
+      adjustedBase,
+      matchedCategory,
+      targetScore: info.targetScore
+    };
+  }
+
+  /**
    * Reset combat state (for new game).
    */
   reset() {
