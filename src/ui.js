@@ -57,6 +57,9 @@ class GameUI {
 
       // Battle
       diceContainer: document.getElementById('dice-container'),
+      diceBowl: document.getElementById('dice-bowl'),
+      bowlTop: null, // Will be cached when bowl is created
+      bowlBody: null,
       currentScore: document.getElementById('current-score'),
       targetScoreDisplay: document.getElementById('target-score-display'),
       resultStatus: document.getElementById('result-status'),
@@ -113,7 +116,7 @@ class GameUI {
   }
 
   /** ==================== 渲染主入口 ==================== */
-  _render() {
+  async _render() {
     const state = this._gameFlow.getState();
 
     // 清理选择模式（如果不在 ROLL_RESULT 状态）
@@ -128,7 +131,7 @@ class GameUI {
         break;
       case GameState.ROLL_RESULT:
         // 投掷后、确认前：显示分数对比和可使用消耗品
-        this._renderRollResult();
+        await this._renderRollResult();
         break;
       case GameState.SHOP:
         this._renderShop();
@@ -143,9 +146,14 @@ class GameUI {
   }
 
   /** ==================== 渲染投掷结果（分数对比阶段） ==================== */
-  _renderRollResult() {
+  async _renderRollResult() {
     const result = this._pendingRollResult;
     if (!result) return;
+
+    // 如果碗盖还显示着，先掀开（揭晓时刻）
+    if (!this._elements.diceBowl.classList.contains('hidden')) {
+      await this._liftBowlCover();
+    }
 
     const round = this._gameFlow.getCurrentRound();
     const total = this._gameFlow.getTotalRounds();
@@ -166,8 +174,8 @@ class GameUI {
     // 骰子（显示投掷后的结果）
     this._renderDice(result.dice);
 
-    // 分数对比（显示提示信息）
-    this._elements.currentScore.textContent = result.adjustedBase;
+    // 分数对比（显示提示信息）- 使用滚动动画
+    await this._animateNumber(this._elements.currentScore, result.adjustedBase, 400);
     this._elements.targetScoreDisplay.textContent = result.targetScore;
 
     const gap = result.targetScore - result.adjustedBase;
@@ -549,22 +557,71 @@ class GameUI {
     this._isRolling = true;
     this._updateButtons();
 
-    // 骰子滚动动画
+    // 获取骰子元素
     const diceElements = this._elements.diceContainer.querySelectorAll('.die');
-    diceElements.forEach(d => d => d.classList.add('rolling'));
 
-    // 等待动画完成
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // 骰子滚动动画 - 持续1.5秒，期间骰子值随机变化
+    const rollDuration = 1500;
 
+    // 添加滚动动画类
+    diceElements.forEach(d => d.classList.add('rolling'));
+
+    // 滚动期间不断更新骰子值，营造紧张感
+    const rollInterval = setInterval(() => {
+      diceElements.forEach(d => {
+        const randomValue = Math.floor(Math.random() * 6) + 1;
+        d.textContent = randomValue;
+      });
+    }, 100);
+
+    // 等待滚动完成
+    await new Promise(resolve => setTimeout(resolve, rollDuration));
+
+    // 停止随机变化
+    clearInterval(rollInterval);
     diceElements.forEach(d => d.classList.remove('rolling'));
 
     // Phase 1: 执行投掷阶段（不判定胜负）
     const rollResult = this._gameFlow.executeRollPhase();
 
+    // 显示碗盖扣下动画
+    await this._showBowlCover();
+
     // 存储投掷结果用于显示（此时还未判定胜负）
     this._pendingRollResult = rollResult;
     this._isRolling = false;
     this._render();  // 将显示分数对比和可使用消耗品
+  }
+
+  /** 显示碗盖扣下动画 */
+  async _showBowlCover() {
+    this._elements.diceBowl.classList.remove('hidden');
+
+    // 缓存碗盖元素
+    if (!this._elements.bowlTop) {
+      this._elements.bowlTop = this._elements.diceBowl.querySelector('.bowl-top');
+      this._elements.bowlBody = this._elements.diceBowl.querySelector('.bowl-body');
+    }
+
+    // 等待扣下动画完成
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  /** 掀开碗盖动画 */
+  async _liftBowlCover() {
+    if (!this._elements.bowlTop || !this._elements.bowlBody) return;
+
+    // 添加掀开动画类
+    this._elements.bowlTop.classList.add('lifting');
+    this._elements.bowlBody.classList.add('lifting');
+
+    // 等待掀开动画完成
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    // 隐藏碗盖并重置动画
+    this._elements.diceBowl.classList.add('hidden');
+    this._elements.bowlTop.classList.remove('lifting');
+    this._elements.bowlBody.classList.remove('lifting');
   }
 
   /** 确认结果 - 进入最终结算 */
@@ -618,7 +675,7 @@ class GameUI {
     this._showToast(`已选择骰子 ${diceValue}，请点击"使用消耗品"确认`);
   }
 
-  _onUseConsumable() {
+  async _onUseConsumable() {
     if (this._selectedConsumableIndex === null) return;
 
     const cheating = this._gameFlow.getCheating();
@@ -639,32 +696,44 @@ class GameUI {
       // 应用消耗品效果
       const dicePool = this._gameFlow.getDicePool();
       const dice = dicePool.getDice();
+      const diceElements = this._elements.diceContainer.querySelectorAll('.die');
 
       let effectMessage = `使用了 ${ability.name}`;
+      let affectedDieIndex = -1;
 
       switch (ability.effectType) {
         case 'set_dice_value':
           // 换面：使用选中的骰子，设为最大值
-          const targetIndex = this._selectedDieIndex ?? 0;
-          dicePool.setDie(targetIndex, ability.params.max);
+          affectedDieIndex = this._selectedDieIndex ?? 0;
+          dicePool.setDie(affectedDieIndex, ability.params.max);
           effectMessage = `换面：骰子设为 ${ability.params.max}`;
           break;
         case 'reroll_min':
           // 加料：使用选中的骰子
-          const rerollIndex = this._selectedDieIndex ?? 0;
-          dicePool.rerollDie(rerollIndex, ability.params.minValue);
+          affectedDieIndex = this._selectedDieIndex ?? 0;
+          dicePool.rerollDie(affectedDieIndex, ability.params.minValue);
           effectMessage = `加料：重掷骰子（最小${ability.params.minValue}）`;
           break;
         case 'replace_lowest':
           // 偷梁换柱：自动替换最低骰子（不需要选择）
           dicePool.replaceLowest(ability.params.value);
           effectMessage = `偷梁换柱：最低骰子变为 ${ability.params.value}`;
+          // 找到最低骰子的索引
+          let minVal = Infinity, minIdx = 0;
+          dice.forEach((d, i) => {
+            if (d.value < minVal) { minVal = d.value; minIdx = i; }
+          });
+          affectedDieIndex = minIdx;
           break;
         case 'extra_roll':
           dicePool.roll();
           const clonePassive = cheating.getPassiveByEffect('clone_dice');
           if (clonePassive) dicePool.addTempDie();
           effectMessage = `双投：重新投掷全部骰子`;
+          // 对所有骰子添加微调动画
+          diceElements.forEach(d => d.classList.add('nudge'));
+          await new Promise(resolve => setTimeout(resolve, 300));
+          diceElements.forEach(d => d.classList.remove('nudge'));
           break;
         case 'reveal_weakness':
           effectMessage = `透视：已显示弱点分类`;
@@ -672,6 +741,14 @@ class GameUI {
       }
 
       this._showToast(effectMessage);
+
+      // 如果有单个骰子被修改，播放微调动画
+      if (affectedDieIndex >= 0 && diceElements[affectedDieIndex]) {
+        const dieElement = diceElements[affectedDieIndex];
+        dieElement.classList.add('nudge');
+        await new Promise(resolve => setTimeout(resolve, 300));
+        dieElement.classList.remove('nudge');
+      }
 
       // 重新计算分数并更新缓存的结果
       this._pendingRollResult = this._gameFlow.recalculateRollResult();
@@ -731,6 +808,29 @@ class GameUI {
   }
 
   /** ==================== 辅助方法 ==================== */
+  /**
+   * 数字滚动动画
+   * @param {HTMLElement} element - 要更新的DOM元素
+   * @param {number} targetValue - 目标值
+   * @param {number} duration - 动画时长（毫秒）
+   */
+  async _animateNumber(element, targetValue, duration = 500) {
+    const startValue = parseInt(element.textContent) || 0;
+    const diff = targetValue - startValue;
+    const steps = 20;
+    const stepDuration = duration / steps;
+    const stepValue = diff / steps;
+
+    for (let i = 0; i < steps; i++) {
+      await new Promise(resolve => setTimeout(resolve, stepDuration));
+      const currentValue = Math.round(startValue + stepValue * (i + 1));
+      element.textContent = currentValue;
+    }
+    element.textContent = targetValue; // 确保最终值准确
+  }
+
+  /**
+   * 显示 Toast 浮动提示
   /**
    * 显示 Toast 浮动提示
    * @param {string} message - 提示消息

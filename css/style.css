@@ -145,24 +145,89 @@ body {
 
 /* 骰子滚动动画 */
 .die.rolling {
-  animation: roll 0.5s ease-out;
+  animation: roll-wobble 0.15s ease-in-out infinite;
 }
 
-@keyframes roll {
+@keyframes roll-wobble {
   0% {
-    transform: rotate(0deg) scale(1);
-  }
-  25% {
-    transform: rotate(90deg) scale(1.1);
+    transform: rotate(-15deg) scale(1.05);
   }
   50% {
-    transform: rotate(180deg) scale(1.15);
-  }
-  75% {
-    transform: rotate(270deg) scale(1.1);
+    transform: rotate(15deg) scale(1.1);
   }
   100% {
-    transform: rotate(360deg) scale(1);
+    transform: rotate(-15deg) scale(1.05);
+  }
+}
+
+/* ==================== 碗盖效果 ==================== */
+.dice-bowl {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.dice-bowl.hidden {
+  display: none;
+}
+
+/* 碗盖扣下动画 */
+.bowl-top {
+  width: 280px;
+  height: 40px;
+  background: linear-gradient(180deg, #8B4513 0%, #654321 50%, #4a2c17 100%);
+  border-radius: 50% 50% 0 0;
+  margin: 0 auto;
+  box-shadow:
+    0 -4px 12px rgba(0,0,0,0.3),
+    inset 0 2px 4px rgba(255,255,255,0.1);
+  animation: bowl-cover-down 0.5s ease-out forwards;
+}
+
+.bowl-body {
+  width: 280px;
+  height: 60px;
+  background: linear-gradient(180deg, #654321 0%, #4a2c17 100%);
+  border-radius: 0 0 50% 50% / 0 0 30px 30px;
+  margin: -5px auto 0;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.4),
+    inset 0 -2px 4px rgba(0,0,0,0.2);
+  animation: bowl-cover-down 0.5s ease-out forwards;
+}
+
+@keyframes bowl-cover-down {
+  0% {
+    transform: translateY(-100px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(10px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 碗盖掀开动画 */
+.bowl-top.lifting,
+.bowl-body.lifting {
+  animation: bowl-lift-up 0.6s ease-in forwards;
+}
+
+@keyframes bowl-lift-up {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-150px);
+    opacity: 0;
   }
 }
 
@@ -189,6 +254,29 @@ body {
   color: white;
   box-shadow: 0 0 20px rgba(52, 152, 219, 0.8);
   transform: scale(1.1);
+}
+
+/* 出千微调动画 - 骰子偷偷被拨动 */
+.die.nudge {
+  animation: nudge-cheat 0.3s ease-out;
+}
+
+@keyframes nudge-cheat {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg) scale(1.05);
+  }
+  50% {
+    transform: rotate(10deg) scale(1.05);
+  }
+  75% {
+    transform: rotate(-5deg) scale(1.02);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
 }
 
 @keyframes pulse {
