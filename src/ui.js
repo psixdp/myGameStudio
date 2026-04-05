@@ -58,8 +58,7 @@ class GameUI {
       // Battle
       diceContainer: document.getElementById('dice-container'),
       diceBowl: document.getElementById('dice-bowl'),
-      bowlTop: null, // Will be cached when bowl is created
-      bowlBody: null,
+      bowlStatusText: document.getElementById('bowl-status-text'),
       currentScore: document.getElementById('current-score'),
       targetScoreDisplay: document.getElementById('target-score-display'),
       resultStatus: document.getElementById('result-status'),
@@ -119,16 +118,19 @@ class GameUI {
   async _render() {
     const state = this._gameFlow.getState();
 
-    // 清理选择模式（如果不在 ROLL_RESULT 状态）
-    if (state !== GameState.ROLL_RESULT) {
+    // 清理选择模式（如果不在投掷后中间状态）
+    if (!this._isPostRollState(state)) {
       this._isSelectingTarget = false;
       this._selectedDieIndex = null;
+      this._elements.diceBowl.classList.add('hidden');
+      this._elements.diceBowl.classList.remove('covered', 'revealing');
     }
 
     switch (state) {
       case GameState.BATTLE:
         this._renderBattle();
         break;
+      case GameState.BOWL_COVERED:
       case GameState.ROLL_RESULT:
         // 投掷后、确认前：显示分数对比和可使用消耗品
         await this._renderRollResult();
@@ -149,11 +151,6 @@ class GameUI {
   async _renderRollResult() {
     const result = this._pendingRollResult;
     if (!result) return;
-
-    // 如果碗盖还显示着，先掀开（揭晓时刻）
-    if (!this._elements.diceBowl.classList.contains('hidden')) {
-      await this._liftBowlCover();
-    }
 
     const round = this._gameFlow.getCurrentRound();
     const total = this._gameFlow.getTotalRounds();
@@ -515,8 +512,8 @@ class GameUI {
     const state = this._gameFlow.getState();
     const cheating = this._gameFlow.getCheating();
 
-    // ROLL_RESULT 状态：显示动态按钮，允许使用消耗品
-    if (state === GameState.ROLL_RESULT) {
+    // 投掷后中间状态：显示动态按钮，允许使用消耗品
+    if (this._isPostRollState(state)) {
       this._elements.btnRoll.disabled = true;
       this._elements.btnConfirmResult.classList.remove('hidden');
 
@@ -585,7 +582,7 @@ class GameUI {
     const rollResult = this._gameFlow.executeRollPhase();
 
     // 显示碗盖扣下动画
-    await this._showBowlCover();
+    await this._showBowlStatus();
 
     // 存储投掷结果用于显示（此时还未判定胜负）
     this._pendingRollResult = rollResult;
@@ -593,39 +590,43 @@ class GameUI {
     this._render();  // 将显示分数对比和可使用消耗品
   }
 
-  /** 显示碗盖扣下动画 */
-  async _showBowlCover() {
+  /** 显示“可出千”状态徽标（不遮挡 UI） */
+  async _showBowlStatus() {
     this._elements.diceBowl.classList.remove('hidden');
+    this._elements.diceBowl.classList.remove('revealing');
+    this._elements.diceBowl.classList.add('covered');
 
-    // 缓存碗盖元素
-    if (!this._elements.bowlTop) {
-      this._elements.bowlTop = this._elements.diceBowl.querySelector('.bowl-top');
-      this._elements.bowlBody = this._elements.diceBowl.querySelector('.bowl-body');
+    if (this._elements.bowlStatusText) {
+      this._elements.bowlStatusText.textContent = '盖碗中 · 可出千';
     }
 
-    // 等待扣下动画完成
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 180));
   }
 
-  /** 掀开碗盖动画 */
-  async _liftBowlCover() {
-    if (!this._elements.bowlTop || !this._elements.bowlBody) return;
+  /** 隐藏“可出千”状态徽标（揭晓时） */
+  async _hideBowlStatus() {
+    if (this._elements.diceBowl.classList.contains('hidden')) return;
 
-    // 添加掀开动画类
-    this._elements.bowlTop.classList.add('lifting');
-    this._elements.bowlBody.classList.add('lifting');
+    this._elements.diceBowl.classList.remove('covered');
+    this._elements.diceBowl.classList.add('revealing');
 
-    // 等待掀开动画完成
-    await new Promise(resolve => setTimeout(resolve, 600));
+    if (this._elements.bowlStatusText) {
+      this._elements.bowlStatusText.textContent = '揭晓中...';
+    }
 
-    // 隐藏碗盖并重置动画
+    await new Promise(resolve => setTimeout(resolve, 220));
+
     this._elements.diceBowl.classList.add('hidden');
-    this._elements.bowlTop.classList.remove('lifting');
-    this._elements.bowlBody.classList.remove('lifting');
+    this._elements.diceBowl.classList.remove('covered', 'revealing');
   }
 
   /** 确认结果 - 进入最终结算 */
-  _onConfirmResult() {
+  async _onConfirmResult() {
+    // 揭晓时刻：先掀开碗盖，再结算
+    if (!this._elements.diceBowl.classList.contains('hidden')) {
+      await this._hideBowlStatus();
+    }
+
     // Phase 2: 通过 GameFlow 完成最终结算并转换状态
     this._gameFlow.finalizeBattle();
 
@@ -808,6 +809,10 @@ class GameUI {
   }
 
   /** ==================== 辅助方法 ==================== */
+  _isPostRollState(state) {
+    return state === GameState.BOWL_COVERED || state === GameState.ROLL_RESULT;
+  }
+
   /**
    * 数字滚动动画
    * @param {HTMLElement} element - 要更新的DOM元素
@@ -829,8 +834,6 @@ class GameUI {
     element.textContent = targetValue; // 确保最终值准确
   }
 
-  /**
-   * 显示 Toast 浮动提示
   /**
    * 显示 Toast 浮动提示
    * @param {string} message - 提示消息

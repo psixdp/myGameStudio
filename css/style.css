@@ -103,6 +103,7 @@ body {
 /* ==================== 战斗区域 ==================== */
 .battle-area {
   margin-bottom: 20px;
+  position: relative;
 }
 
 /* 骰子容器 */
@@ -163,10 +164,9 @@ body {
 /* ==================== 碗盖效果 ==================== */
 .dice-bowl {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
   pointer-events: none;
 }
 
@@ -174,59 +174,46 @@ body {
   display: none;
 }
 
-/* 碗盖扣下动画 */
-.bowl-top {
-  width: 280px;
-  height: 40px;
-  background: linear-gradient(180deg, #8B4513 0%, #654321 50%, #4a2c17 100%);
-  border-radius: 50% 50% 0 0;
-  margin: 0 auto;
-  box-shadow:
-    0 -4px 12px rgba(0,0,0,0.3),
-    inset 0 2px 4px rgba(255,255,255,0.1);
-  animation: bowl-cover-down 0.5s ease-out forwards;
+/* 盖碗状态提示（轻量，不遮挡交互） */
+.bowl-status-text {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #ffdca8;
+  background: rgba(74, 44, 23, 0.92);
+  border: 1px solid rgba(255, 194, 120, 0.45);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
 }
 
-.bowl-body {
-  width: 280px;
-  height: 60px;
-  background: linear-gradient(180deg, #654321 0%, #4a2c17 100%);
-  border-radius: 0 0 50% 50% / 0 0 30px 30px;
-  margin: -5px auto 0;
-  box-shadow:
-    0 4px 12px rgba(0,0,0,0.4),
-    inset 0 -2px 4px rgba(0,0,0,0.2);
-  animation: bowl-cover-down 0.5s ease-out forwards;
+.dice-bowl.covered .bowl-status-text {
+  animation: bowl-status-in 0.18s ease-out;
 }
 
-@keyframes bowl-cover-down {
+.dice-bowl.revealing .bowl-status-text {
+  animation: bowl-status-out 0.2s ease-in forwards;
+}
+
+@keyframes bowl-status-in {
   0% {
-    transform: translateY(-100px);
+    transform: translateY(-6px) scale(0.98);
     opacity: 0;
   }
-  60% {
-    transform: translateY(10px);
-    opacity: 1;
-  }
   100% {
     transform: translateY(0);
     opacity: 1;
   }
 }
 
-/* 碗盖掀开动画 */
-.bowl-top.lifting,
-.bowl-body.lifting {
-  animation: bowl-lift-up 0.6s ease-in forwards;
-}
-
-@keyframes bowl-lift-up {
+@keyframes bowl-status-out {
   0% {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
   100% {
-    transform: translateY(-150px);
+    transform: translateY(-4px) scale(0.98);
     opacity: 0;
   }
 }

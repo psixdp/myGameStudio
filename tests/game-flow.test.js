@@ -561,3 +561,43 @@ describe('query methods', () => {
     assert.strictEqual(game.isState(GameState.MENU), false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Additional: Two-phase flow state machine
+// ---------------------------------------------------------------------------
+describe('two-phase flow state machine', () => {
+  it('executeRollPhase transitions to BOWL_COVERED', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+
+    const rollResult = game.executeRollPhase();
+    assert.ok(rollResult);
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+  });
+
+  it('recalculateRollResult works in BOWL_COVERED', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+    game.executeRollPhase();
+
+    const recalculated = game.recalculateRollResult();
+    assert.ok(recalculated);
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+  });
+
+  it('finalizeBattle is rejected in BATTLE and succeeds in BOWL_COVERED', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+
+    // Wrong phase: should be rejected
+    const invalidFinalize = game.finalizeBattle();
+    assert.strictEqual(invalidFinalize, null);
+    assert.strictEqual(game.getState(), GameState.BATTLE);
+
+    // Correct phase: should finalize
+    game.executeRollPhase();
+    const finalResult = game.finalizeBattle();
+    assert.ok(finalResult);
+    assert.notStrictEqual(game.getState(), GameState.BOWL_COVERED);
+  });
+});

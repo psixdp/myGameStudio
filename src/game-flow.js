@@ -17,7 +17,8 @@ const GameState = {
   MENU: 'MENU',
   INITIALIZING: 'INITIALIZING',
   BATTLE: 'BATTLE',
-  ROLL_RESULT: 'ROLL_RESULT',  // 投掷后、确认前的中间状态
+  BOWL_COVERED: 'BOWL_COVERED',  // 投掷后、确认前（盖碗阶段）
+  ROLL_RESULT: 'ROLL_RESULT',  // 兼容保留：映射为 BOWL_COVERED 阶段
   SHOP: 'SHOP',
   VICTORY: 'VICTORY',
   DEFEAT: 'DEFEAT',
@@ -205,7 +206,7 @@ class GameFlow {
     }
 
     const rollResult = this._combat.executeRollPhase(this._round);
-    this._state = GameState.ROLL_RESULT;
+    this._state = GameState.BOWL_COVERED;
     return rollResult;
   }
 
@@ -215,7 +216,7 @@ class GameFlow {
    * @returns {object|null} final combat result or null if invalid state
    */
   finalizeBattle() {
-    if (this._state !== GameState.ROLL_RESULT) {
+    if (this._state !== GameState.BOWL_COVERED && this._state !== GameState.ROLL_RESULT) {
       return null;
     }
 
@@ -255,7 +256,7 @@ class GameFlow {
    * @returns {object|null} updated roll result or null if invalid state
    */
   recalculateRollResult() {
-    if (this._state !== GameState.ROLL_RESULT) {
+    if (this._state !== GameState.BOWL_COVERED && this._state !== GameState.ROLL_RESULT) {
       return null;
     }
     return this._combat.recalculateFromCurrentDice();
