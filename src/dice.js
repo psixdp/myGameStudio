@@ -26,13 +26,13 @@ class DicePool {
     this._initialCount = opts.initialCount ?? 4;
     this._maxCount = opts.maxCount ?? 7;
 
-    /** @type {Array<{value: number, isTemp: boolean}>} */
+    /** @type {Array<{value: number, isTemp: boolean, isFrozen: boolean}>} */
     this._dice = [];
     this._rolled = false;
 
     // Create initial dice (un-rolled, value 0)
     for (let i = 0; i < this._initialCount; i++) {
-      this._dice.push({ value: 0, isTemp: false });
+      this._dice.push({ value: 0, isTemp: false, isFrozen: false });
     }
   }
 
@@ -72,9 +72,11 @@ class DicePool {
   /**
    * Roll all dice (atomic — all at once).
    * Resets to un-rolled state first if needed.
+   * Frozen dice are skipped and retain their values.
    */
   roll() {
     for (const die of this._dice) {
+      if (die.isFrozen) continue; // Skip frozen dice
       die.value = this._diceStream.nextInt(this._minFace, this._maxFace);
     }
     this._rolled = true;
@@ -167,7 +169,7 @@ class DicePool {
     // Allow one beyond max
     if (this._dice.length >= this._maxCount + 1) return false;
     const value = this._cloneStream.nextInt(this._minFace, this._maxFace);
-    this._dice.push({ value, isTemp: true });
+    this._dice.push({ value, isTemp: true, isFrozen: false });
     return true;
   }
 
@@ -179,8 +181,52 @@ class DicePool {
   addPermanentDie(initialValue) {
     if (this.getPermanentCount() >= this._maxCount) return false;
     const value = initialValue ?? 0;
-    this._dice.push({ value: this._clampFace(value), isTemp: false });
+    this._dice.push({ value: this._clampFace(value), isTemp: false, isFrozen: false });
     return true;
+  }
+
+  /**
+   * Swap values of two dice (换位 consumable).
+   * @param {number} index1 - 0-based index of first die
+   * @param {number} index2 - 0-based index of second die
+   */
+  swapDice(index1, index2) {
+    if (index1 < 0 || index1 >= this._dice.length) return;
+    if (index2 < 0 || index2 >= this._dice.length) return;
+    const temp = this._dice[index1].value;
+    this._dice[index1].value = this._dice[index2].value;
+    this._dice[index2].value = temp;
+  }
+
+  /**
+   * Invert a die's value (反转 consumable).
+   * Value becomes (sumValue - originalValue), e.g., 7-1=6, 7-3=4.
+   * @param {number} index - 0-based index
+   * @param {number} sumValue - sum value for inversion (default 7 for 6-sided dice)
+   */
+  invertDie(index, sumValue = 7) {
+    if (index < 0 || index >= this._dice.length) return;
+    const current = this._dice[index].value;
+    this._dice[index].value = this._clampFace(sumValue - current);
+  }
+
+  /**
+   * Freeze a die so it retains its value in the next roll (冻结 consumable).
+   * @param {number} index - 0-based index
+   */
+  freezeDie(index) {
+    if (index < 0 || index >= this._dice.length) return;
+    this._dice[index].isFrozen = true;
+  }
+
+  /**
+   * Clear frozen state from all dice (call at start of each roll).
+   * Frozen dice will be rolled normally next time.
+   */
+  clearFrozenDice() {
+    for (const die of this._dice) {
+      die.isFrozen = false;
+    }
   }
 
   // ---------------------------------------------------------------------------

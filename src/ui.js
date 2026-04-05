@@ -22,6 +22,7 @@ class GameUI {
     // Target selection state
     this._isSelectingTarget = false;  // 是否正在选择骰子目标
     this._selectedDieIndex = null;    // 选中的骰子索引
+    this._selectedDieIndex2 = null;   // 第二个选中的骰子索引（用于换位）
   }
 
   /**
@@ -122,6 +123,7 @@ class GameUI {
     if (!this._isPostRollState(state)) {
       this._isSelectingTarget = false;
       this._selectedDieIndex = null;
+      this._selectedDieIndex2 = null;
       this._elements.diceBowl.classList.add('hidden');
       this._elements.diceBowl.classList.remove('covered', 'revealing');
     }
@@ -301,6 +303,7 @@ class GameUI {
       const die = document.createElement('div');
       die.className = 'die';
       if (d.isTemp) die.classList.add('temp');
+      if (d.isFrozen) die.classList.add('frozen');
 
       // 添加可选择样式
       if (this._isSelectingTarget) {
@@ -311,6 +314,10 @@ class GameUI {
       // 添加已选中样式
       if (this._selectedDieIndex === i) {
         die.classList.add('selected');
+      }
+      // 添加第二个选中样式（用于换位）
+      if (this._selectedDieIndex2 === i) {
+        die.classList.add('selected-2');
       }
 
       die.textContent = d.value;
@@ -357,7 +364,9 @@ class GameUI {
 
     // 显示效果预览
     let effectText = '';
-    if (item.tags && item.tags.includes('targeted')) {
+    if (item.tags && item.tags.includes('targeted_dual')) {
+      effectText = '🎯 需要选择两个骰子交换';
+    } else if (item.tags && item.tags.includes('targeted')) {
       effectText = '🎯 需要选择目标骰子';
     } else if (item.tags && item.tags.includes('universal')) {
       effectText = '🎯 需要选择目标骰子（将设为6点）';
@@ -365,6 +374,10 @@ class GameUI {
       effectText = 'ℹ️ 查看信息';
     } else if (item.tags && item.tags.includes('reroll')) {
       effectText = '🔄 重新投掷全部骰子';
+    } else if (item.tags && item.tags.includes('risk')) {
+      effectText = '🎲 高风险：50%全6或全1';
+    } else if (item.tags && item.tags.includes('persistent')) {
+      effectText = '❄️ 跨轮生效：下轮保留该骰子';
     }
 
     this._elements.consumablePreviewEffect.textContent = effectText;
@@ -641,6 +654,7 @@ class GameUI {
     // 退出选择模式
     this._isSelectingTarget = false;
     this._selectedDieIndex = null;
+    this._selectedDieIndex2 = null;
 
     this._selectedConsumableIndex = index;
     this._renderConsumables(consumables);
@@ -649,8 +663,12 @@ class GameUI {
     const selected = consumables[index];
     const needsTarget = selected && selected.tags &&
       (selected.tags.includes('targeted') || selected.tags.includes('universal'));
+    const needsDualTarget = selected && selected.tags && selected.tags.includes('targeted_dual');
 
-    if (needsTarget) {
+    if (needsDualTarget) {
+      this._isSelectingTarget = true;
+      this._showToast(`${selected.name}: 请依次选择两个骰子`);
+    } else if (needsTarget) {
       this._isSelectingTarget = true;
       this._showToast(`${selected.name}: 请点击选择一个骰子`);
     }
@@ -663,17 +681,38 @@ class GameUI {
   _onSelectDie(dieIndex) {
     if (!this._isSelectingTarget) return;
 
-    this._selectedDieIndex = dieIndex;
-    this._render();
-
     const cheating = this._gameFlow.getCheating();
     const consumables = cheating.getConsumables();
     const selected = consumables[this._selectedConsumableIndex];
-
-    // 显示选中提示，等待点击"使用消耗品"按钮
     const dice = this._gameFlow.getDicePool().getDice();
     const diceValue = dice[dieIndex].value;
-    this._showToast(`已选择骰子 ${diceValue}，请点击"使用消耗品"确认`);
+
+    // 检查是否是双目标选择
+    const isDualTarget = selected && selected.tags && selected.tags.includes('targeted_dual');
+
+    if (isDualTarget) {
+      // 双目标选择逻辑
+      if (this._selectedDieIndex === null) {
+        // 选择第一个目标
+        this._selectedDieIndex = dieIndex;
+        this._showToast(`已选择第1个骰子 ${diceValue}，请选择第2个`);
+      } else if (this._selectedDieIndex2 === null && dieIndex !== this._selectedDieIndex) {
+        // 选择第二个目标
+        this._selectedDieIndex2 = dieIndex;
+        this._showToast(`已选择第2个骰子 ${diceValue}，请点击"使用消耗品"确认`);
+      } else {
+        // 重新开始选择
+        this._selectedDieIndex = dieIndex;
+        this._selectedDieIndex2 = null;
+        this._showToast(`已重新选择第1个骰子 ${diceValue}，请选择第2个`);
+      }
+    } else {
+      // 单目标选择逻辑
+      this._selectedDieIndex = dieIndex;
+      this._showToast(`已选择骰子 ${diceValue}，请点击"使用消耗品"确认`);
+    }
+
+    this._render();
   }
 
   async _onUseConsumable() {
@@ -685,8 +724,12 @@ class GameUI {
 
     // 检查是否需要选择目标
     const isTargeted = selectedConsumable.tags && selectedConsumable.tags.includes('targeted');
+    const isDualTarget = selectedConsumable.tags && selectedConsumable.tags.includes('targeted_dual');
 
-    if (isTargeted && this._selectedDieIndex === null) {
+    if (isDualTarget && (this._selectedDieIndex === null || this._selectedDieIndex2 === null)) {
+      this._showToast('请先选择两个骰子');
+      return;
+    } else if (isTargeted && this._selectedDieIndex === null) {
       this._showToast('请先选择一个骰子');
       return;
     }
@@ -726,6 +769,38 @@ class GameUI {
           });
           affectedDieIndex = minIdx;
           break;
+        case 'swap_values':
+          // 换位：交换两个骰子的值
+          dicePool.swapDice(this._selectedDieIndex, this._selectedDieIndex2);
+          effectMessage = `换位：交换了两个骰子`;
+          affectedDieIndex = this._selectedDieIndex;
+          break;
+        case 'gamble_reroll':
+          // 赌博：50%概率全6，50%概率全1
+          const rng = this._gameFlow.getRNG().getStream('dice');
+          const isLucky = rng.nextFloat() < ability.params.chance;
+          const newValue = isLucky ? ability.params.goodValue : ability.params.badValue;
+          dice.forEach((d, i) => {
+            d.value = newValue;
+          });
+          effectMessage = isLucky ? `赌博：大成功！全骰变为6` : `赌博：失败...全骰变为1`;
+          // 对所有骰子添加微调动画
+          diceElements.forEach(d => d.classList.add('nudge'));
+          await new Promise(resolve => setTimeout(resolve, 300));
+          diceElements.forEach(d => d.classList.remove('nudge'));
+          break;
+        case 'freeze_die':
+          // 冻结：骰子下轮保留值
+          affectedDieIndex = this._selectedDieIndex;
+          dicePool.freezeDie(affectedDieIndex);
+          effectMessage = `冻结：骰子下轮保留`;
+          break;
+        case 'invert_value':
+          // 反转：骰子值变为 (7-原值)
+          affectedDieIndex = this._selectedDieIndex;
+          dicePool.invertDie(affectedDieIndex, ability.params.sumValue);
+          effectMessage = `反转：骰子值已反转`;
+          break;
         case 'extra_roll':
           dicePool.roll();
           const clonePassive = cheating.getPassiveByEffect('clone_dice');
@@ -744,7 +819,7 @@ class GameUI {
       this._showToast(effectMessage);
 
       // 如果有单个骰子被修改，播放微调动画
-      if (affectedDieIndex >= 0 && diceElements[affectedDieIndex]) {
+      if (affectedDieIndex >= 0 && affectedDieIndex < diceElements.length && diceElements[affectedDieIndex]) {
         const dieElement = diceElements[affectedDieIndex];
         dieElement.classList.add('nudge');
         await new Promise(resolve => setTimeout(resolve, 300));
