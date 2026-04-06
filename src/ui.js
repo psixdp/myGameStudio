@@ -102,6 +102,14 @@ class GameUI {
       totalTokens: document.getElementById('total-tokens'),
       gameoverMessage: document.getElementById('gameover-message'),
       btnRestart: document.getElementById('btn-restart'),
+
+      // Scoring Rules
+      btnScoringRules: document.getElementById('btn-scoring-rules'),
+      scoringRulesOverlay: document.getElementById('scoring-rules-overlay'),
+      btnCloseScoringRules: document.getElementById('btn-close-scoring-rules'),
+      scoringDiceValues: document.getElementById('scoring-dice-values'),
+      scoringPassives: document.getElementById('scoring-passives'),
+      scoringTableBody: document.getElementById('scoring-table-body'),
     };
   }
 
@@ -113,6 +121,8 @@ class GameUI {
     this._elements.btnRefreshShop.addEventListener('click', () => this._onRefreshShop());
     this._elements.btnCloseShop.addEventListener('click', () => this._onCloseShop());
     this._elements.btnRestart.addEventListener('click', () => this._onRestart());
+    this._elements.btnScoringRules.addEventListener('click', () => this._onShowScoringRules());
+    this._elements.btnCloseScoringRules.addEventListener('click', () => this._onCloseScoringRules());
   }
 
   /** ==================== 渲染主入口 ==================== */
@@ -939,6 +949,230 @@ class GameUI {
       'yahtzee': '豹子',
     };
     return names[categoryId] || categoryId;
+  }
+
+  /** ==================== 记分规则弹窗 ==================== */
+
+  /**
+   * 显示记分规则弹窗
+   */
+  _onShowScoringRules() {
+    this._renderScoringRules();
+    this._elements.scoringRulesOverlay.classList.remove('hidden');
+  }
+
+  /**
+   * 关闭记分规则弹窗
+   */
+  _onCloseScoringRules() {
+    this._elements.scoringRulesOverlay.classList.add('hidden');
+  }
+
+  /**
+   * 渲染记分规则表格
+   */
+  _renderScoringRules() {
+    const dicePool = this._gameFlow.getDicePool();
+    const cheating = this._gameFlow.getCheating();
+    const enemy = this._gameFlow.getEnemy();
+    const dataConfig = this._gameFlow.getDataConfig();
+
+    // 获取当前骰子值
+    const diceValues = dicePool.getValues();
+    this._elements.scoringDiceValues.textContent = diceValues.length > 0
+      ? `[${diceValues.join(', ')}]`
+      : '(未投掷)';
+
+    // 显示被动能力影响
+    const passives = cheating.getPassives();
+    if (passives.length === 0) {
+      this._elements.scoringPassives.innerHTML = '<span class="none">（无被动能力）</span>';
+    } else {
+      this._elements.scoringPassives.innerHTML = passives.map(p =>
+        `<span class="passive-item">${p.name}</span>`
+      ).join('');
+    }
+
+    // 获取所有分类
+    const categories = dataConfig.getCategories();
+    const blockedCategories = enemy.getBlockedCategories();
+
+    // 计算各分类得分
+    const rows = categories.map(category => {
+      const isBlocked = blockedCategories.includes(category.id);
+      const matches = this._matchesCategory(diceValues, category);
+
+      // 计算基础分
+      const baseScore = this._calculateBase(diceValues, category);
+
+      // 计算被动加成
+      const matchedCount = this._calcMatchedCount(category, diceValues);
+      const flatBonus = cheating.getFlatBonuses(category, dicePool, matchedCount);
+
+      // 获取倍率
+      const multiplier = cheating.getMultipliers();
+
+      // 计算最终得分
+      const finalScore = Math.floor((baseScore + flatBonus) * multiplier);
+
+      return {
+        category,
+        isBlocked,
+        matches,
+        baseScore,
+        flatBonus,
+        multiplier,
+        finalScore
+      };
+    });
+
+    // 获取当前匹配的分类
+    let currentMatchedCategory = null;
+    if (diceValues.length > 0) {
+      for (const row of rows) {
+        if (!row.isBlocked && row.matches) {
+          currentMatchedCategory = row.category.id;
+          break;
+        }
+      }
+    }
+
+    // 渲染表格
+    this._elements.scoringTableBody.innerHTML = rows.map(row => {
+      const isCurrentMatch = row.category.id === currentMatchedCategory;
+      const blockedClass = row.isBlocked ? 'blocked' : '';
+      const currentClass = isCurrentMatch ? 'current-match' : '';
+
+      // 匹配条件描述
+      const conditionText = this._getCategoryConditionText(row.category);
+
+      // 被动加成显示
+      const bonusText = row.flatBonus > 0
+        ? `<span class="has-bonus">+${row.flatBonus}</span>`
+        : '<span class="none">-</span>';
+
+      // 倍率显示
+      const multiplierText = row.multiplier !== 1.0
+        ? `×${row.multiplier.toFixed(1)}`
+        : '-';
+
+      return `
+        <tr class="${blockedClass} ${currentClass}">
+          <td>${this._getCategoryDisplayName(row.category.id)}</td>
+          <td><span class="match-condition">${conditionText}</span></td>
+          <td><span class="base-score">${row.baseScore}</span></td>
+          <td class="passive-bonus">${bonusText}</td>
+          <td><span class="multiplier">${multiplierText}</span></td>
+          <td><span class="final-score">${row.finalScore}</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  /**
+   * 检查骰子是否匹配分类
+   */
+  _matchesCategory(values, category) {
+    if (values.length < (category.minDice || 0)) return false;
+
+    switch (category.matchType) {
+      case 'all_same':
+        return values.every(v => v === values[0]);
+      case 'same_value':
+        const targetValue = values[0];
+        const count = values.filter(v => v === targetValue).length;
+        return count >= (category.matchCount || 0);
+      case 'full_house':
+        const counts = {};
+        for (const v of values) {
+          counts[v] = (counts[v] || 0) + 1;
+        }
+        const hasThree = Object.values(counts).some(c => c >= 3);
+        const hasTwo = Object.values(counts).some(c => c >= 2);
+        return hasThree && hasTwo;
+      case 'consecutive':
+        const unique = [...new Set(values)].sort((a, b) => a - b);
+        let consecutive = 1;
+        let maxConsecutive = 1;
+        for (let i = 1; i < unique.length; i++) {
+          if (unique[i] === unique[i-1] + 1) {
+            consecutive++;
+            maxConsecutive = Math.max(maxConsecutive, consecutive);
+          } else {
+            consecutive = 1;
+          }
+        }
+        return maxConsecutive >= (category.consecutiveCount || 0);
+      case 'fallback':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * 计算基础分
+   */
+  _calculateBase(values, category) {
+    const sum = values.reduce((a, b) => a + b, 0);
+    let bonus = 0;
+
+    if (category.bonusType === 'multiplier') {
+      // 豹子的倍率在后续计算，这里不加
+      bonus = 0;
+    } else if (category.bonusType === 'flat') {
+      bonus = category.bonusValue || 0;
+    }
+
+    return sum + bonus;
+  }
+
+  /**
+   * 计算匹配的骰子数量
+   */
+  _calcMatchedCount(category, values) {
+    if (category.matchType === 'all_same') {
+      return values.length;
+    } else if (category.matchType === 'same_value') {
+      const targetValue = values[0];
+      return values.filter(v => v === targetValue).length;
+    } else if (category.matchType === 'full_house') {
+      return values.length; // 满堂红所有骰子都参与
+    } else if (category.matchType === 'consecutive') {
+      const unique = [...new Set(values)].sort((a, b) => a - b);
+      let consecutive = 1;
+      let maxConsecutive = 1;
+      for (let i = 1; i < unique.length; i++) {
+        if (unique[i] === unique[i-1] + 1) {
+          consecutive++;
+          maxConsecutive = Math.max(maxConsecutive, consecutive);
+        } else {
+          consecutive = 1;
+        }
+      }
+      return Math.min(maxConsecutive, values.length);
+    }
+    return values.length;
+  }
+
+  /**
+   * 获取分类匹配条件描述
+   */
+  _getCategoryConditionText(category) {
+    switch (category.matchType) {
+      case 'all_same':
+        return `全部相同`;
+      case 'same_value':
+        return `${category.matchCount}+个相同`;
+      case 'full_house':
+        return `3个相同 + 2个相同`;
+      case 'consecutive':
+        return `${category.consecutiveCount}个连续`;
+      case 'fallback':
+        return `任意`;
+      default:
+        return `-`;
+    }
   }
 }
 
