@@ -150,6 +150,26 @@
     "tags": ["scoring"]
   },
   {
+    "id": "decree_override",
+    "name": "强夺令",
+    "type": "passive",
+    "cost": 5,
+    "effectType": "category_override",
+    "params": { "forceCategory": "three_of_a_kind", "minDice": 2 },
+    "description": "强制将骰子匹配为指定分类，无视实际点数",
+    "tags": ["category_modify", "rule_break"]
+  },
+  {
+    "id": "judgment_flip",
+    "name": "反转审判",
+    "type": "passive",
+    "cost": 4,
+    "effectType": "victory_reverse",
+    "params": { "threshold": 0.85 },
+    "description": "达到目标分数的85%即可获胜",
+    "tags": ["victory_condition", "rule_break"]
+  },
+  {
     "id": "spare_dice",
     "name": "备用骰",
     "type": "dice_expansion",

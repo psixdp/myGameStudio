@@ -155,7 +155,15 @@ class Combat {
 
     // Step 12: Victory determination
     this._stepLog.push('step12_victory_check');
-    const victory = finalScore >= info.targetScore;
+
+    // Check for victory_reverse passive (反转审判) - rule break!
+    let effectiveTargetScore = info.targetScore;
+    const reversePassive = this._cheating.getPassiveByEffect('victory_reverse');
+    if (reversePassive) {
+      effectiveTargetScore = Math.floor(info.targetScore * (reversePassive.params.threshold || 0.85));
+    }
+
+    const victory = finalScore >= effectiveTargetScore;
     let tokensEarned = 0;
     if (victory) {
       tokensEarned = this._economy.getRewardForRound(info.round);
@@ -386,6 +394,15 @@ class Combat {
 
   /** Find best matching category (simplified from scoring system). */
   _matchCategory(values, categories, blockedIds) {
+    // Check for category_override passive (强夺令) - rule break!
+    const overridePassive = this._cheating.getPassiveByEffect('category_override');
+    if (overridePassive) {
+      const forceCat = categories.find(c => c.id === overridePassive.params.forceCategory);
+      if (forceCat && values.length >= overridePassive.params.minDice) {
+        return forceCat;
+      }
+    }
+
     const blocked = new Set(blockedIds);
     for (const cat of categories) {
       if (blocked.has(cat.id)) continue;
