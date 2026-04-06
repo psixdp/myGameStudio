@@ -284,6 +284,18 @@ describe('AC-12: Seal passive', () => {
       assert.strictEqual(result.multiplier, 1.0);
     }
   });
+
+  it('block_pair does NOT affect greed multiplier', () => {
+    const combat = makeCombatSystem(42);
+    combat._cheating.addPassive('greed', 3);
+
+    // Execute round 3 (dealer has block_pair)
+    combat.execute(3);
+
+    // Greed multiplier should still be applied
+    const result = combat.getResult();
+    assert.strictEqual(result.multiplier, 2.0, 'Greed should apply 2x multiplier even when pair is blocked');
+  });
 });
 
 // ---------------------------------------------------------------------------

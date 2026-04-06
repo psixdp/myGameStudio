@@ -130,7 +130,7 @@ describe('AC-4: Unified query interface', () => {
     const passives = config.getAbilities('passive');
     const expansions = config.getAbilities('dice_expansion');
     assert.equal(consumables.length, 9);  // 5 original + 4 new
-    assert.equal(passives.length, 6);
+    assert.equal(passives.length, 9);    // 6 original + 3 new (decree_override, judgment_flip, heaven_dice)
     assert.equal(expansions.length, 2);
   });
 

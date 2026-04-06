@@ -174,10 +174,11 @@ class GameUI {
     this._renderDice(result.dice);
 
     // 分数对比（显示提示信息）- 使用滚动动画
-    await this._animateNumber(this._elements.currentScore, result.adjustedBase, 400);
+    // Bug fix: display final score (with multipliers) not adjustedBase
+    await this._animateNumber(this._elements.currentScore, result.score, 400);
     this._elements.targetScoreDisplay.textContent = result.targetScore;
 
-    const gap = result.targetScore - result.adjustedBase;
+    const gap = result.targetScore - result.score;
     if (gap > 0) {
       this._elements.resultStatus.innerHTML = `⚠️ 还差 ${gap} 分 - 可使用消耗品改写骰子`;
       this._elements.resultStatus.className = 'result-status warning';
