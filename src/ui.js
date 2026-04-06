@@ -544,7 +544,8 @@ class GameUI {
       // 根据分数动态调整按钮文本和样式
       const result = this._pendingRollResult;
       if (result) {
-        const isWinning = result.adjustedBase >= result.targetScore;
+        // Bug fix: use final score (with multipliers) not adjustedBase
+        const isWinning = result.score >= result.targetScore;
         if (isWinning) {
           this._elements.btnConfirmResult.textContent = '🎉 进入商店';
           this._elements.btnConfirmResult.className = 'btn-confirm btn-success';
