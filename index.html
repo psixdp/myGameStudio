@@ -112,29 +112,21 @@
           <button id="btn-close-scoring-rules" class="btn-close">×</button>
         </div>
 
-        <!-- 当前骰子 -->
-        <div class="current-dice-display">
-          <span class="current-dice-label">当前骰子:</span>
-          <span id="scoring-dice-values" class="current-dice-values">-</span>
-        </div>
-
         <!-- 被动能力影响 -->
         <div class="passives-summary">
-          <h4>⚡ 被动能力影响</h4>
+          <h4>⚡ 当前被动能力</h4>
           <div id="scoring-passives" class="scoring-passives">（无）</div>
         </div>
 
-        <!-- 牌型得分表格 -->
+        <!-- 牌型规则表格 -->
         <div class="scoring-table-container">
           <table class="scoring-table">
             <thead>
               <tr>
                 <th>牌型</th>
                 <th>匹配条件</th>
-                <th>基础分</th>
-                <th>被动加成</th>
-                <th>倍率</th>
-                <th>最终得分</th>
+                <th>基础分公式</th>
+                <th>被动影响</th>
               </tr>
             </thead>
             <tbody id="scoring-table-body">
@@ -146,7 +138,7 @@
         <!-- 计分公式说明 -->
         <div class="scoring-formula">
           <p><strong>计分公式:</strong> 最终得分 = (基础分 + 被动加成) × 倍率</p>
-          <p><small>基础分 = 全部骰子点数之和 + 牌型奖励分</small></p>
+          <p><small>基础分 = 全部骰子点数之和 + 牌型奖励分（如有）</small></p>
         </div>
       </div>
     </div>

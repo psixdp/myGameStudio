@@ -969,190 +969,107 @@ class GameUI {
   }
 
   /**
-   * 渲染记分规则表格
+   * 渲染记分规则表格（基础规则版本）
    */
   _renderScoringRules() {
-    const dicePool = this._gameFlow.getDicePool();
-    const cheating = this._gameFlow.getCheating();
-    const enemy = this._gameFlow.getEnemy();
     const dataConfig = this._gameFlow.getDataConfig();
+    const cheating = this._gameFlow.getCheating();
 
-    // 获取当前骰子值
-    const diceValues = dicePool.getValues();
-    this._elements.scoringDiceValues.textContent = diceValues.length > 0
-      ? `[${diceValues.join(', ')}]`
-      : '(未投掷)';
+    // 隐藏当前骰子显示（基础规则不需要）
+    this._elements.scoringDiceValues.textContent = '';
 
-    // 显示被动能力影响
+    // 显示被动能力列表
     const passives = cheating.getPassives();
     if (passives.length === 0) {
       this._elements.scoringPassives.innerHTML = '<span class="none">（无被动能力）</span>';
     } else {
       this._elements.scoringPassives.innerHTML = passives.map(p =>
-        `<span class="passive-item">${p.name}</span>`
+        `<span class="passive-item">${p.name}: ${p.description}</span>`
       ).join('');
     }
 
     // 获取所有分类
     const categories = dataConfig.getCategories();
-    const blockedCategories = enemy.getBlockedCategories();
 
-    // 计算各分类得分
-    const rows = categories.map(category => {
-      const isBlocked = blockedCategories.includes(category.id);
-      const matches = this._matchesCategory(diceValues, category);
+    // 渲染表格（基础规则，不含动态计算）
+    this._elements.scoringTableBody.innerHTML = categories.map(category => {
+      // 基础分公式
+      const baseFormula = this._getBaseFormulaText(category);
 
-      // 计算基础分
-      const baseScore = this._calculateBase(diceValues, category);
-
-      // 计算被动加成
-      const matchedCount = this._calcMatchedCount(category, diceValues);
-      const flatBonus = cheating.getFlatBonuses(category, dicePool, matchedCount);
-
-      // 获取倍率
-      const multiplier = cheating.getMultipliers();
-
-      // 计算最终得分
-      const finalScore = Math.floor((baseScore + flatBonus) * multiplier);
-
-      return {
-        category,
-        isBlocked,
-        matches,
-        baseScore,
-        flatBonus,
-        multiplier,
-        finalScore
-      };
-    });
-
-    // 获取当前匹配的分类
-    let currentMatchedCategory = null;
-    if (diceValues.length > 0) {
-      for (const row of rows) {
-        if (!row.isBlocked && row.matches) {
-          currentMatchedCategory = row.category.id;
-          break;
-        }
-      }
-    }
-
-    // 渲染表格
-    this._elements.scoringTableBody.innerHTML = rows.map(row => {
-      const isCurrentMatch = row.category.id === currentMatchedCategory;
-      const blockedClass = row.isBlocked ? 'blocked' : '';
-      const currentClass = isCurrentMatch ? 'current-match' : '';
-
-      // 匹配条件描述
-      const conditionText = this._getCategoryConditionText(row.category);
-
-      // 被动加成显示
-      const bonusText = row.flatBonus > 0
-        ? `<span class="has-bonus">+${row.flatBonus}</span>`
-        : '<span class="none">-</span>';
-
-      // 倍率显示
-      const multiplierText = row.multiplier !== 1.0
-        ? `×${row.multiplier.toFixed(1)}`
-        : '-';
+      // 被动影响说明
+      const passiveEffect = this._getPassiveEffectText(category, cheating);
 
       return `
-        <tr class="${blockedClass} ${currentClass}">
-          <td>${this._getCategoryDisplayName(row.category.id)}</td>
-          <td><span class="match-condition">${conditionText}</span></td>
-          <td><span class="base-score">${row.baseScore}</span></td>
-          <td class="passive-bonus">${bonusText}</td>
-          <td><span class="multiplier">${multiplierText}</span></td>
-          <td><span class="final-score">${row.finalScore}</span></td>
+        <tr>
+          <td>${this._getCategoryDisplayName(category.id)}</td>
+          <td><span class="match-condition">${this._getCategoryConditionText(category)}</span></td>
+          <td><span class="base-score">${baseFormula}</span></td>
+          <td class="passive-bonus">${passiveEffect}</td>
+          <td><span class="multiplier">-</span></td>
+          <td><span class="final-score">-</span></td>
         </tr>
       `;
     }).join('');
   }
 
   /**
-   * 检查骰子是否匹配分类
+   * 获取基础分公式描述
    */
-  _matchesCategory(values, category) {
-    if (values.length < (category.minDice || 0)) return false;
-
-    switch (category.matchType) {
-      case 'all_same':
-        return values.every(v => v === values[0]);
-      case 'same_value':
-        const targetValue = values[0];
-        const count = values.filter(v => v === targetValue).length;
-        return count >= (category.matchCount || 0);
-      case 'full_house':
-        const counts = {};
-        for (const v of values) {
-          counts[v] = (counts[v] || 0) + 1;
-        }
-        const hasThree = Object.values(counts).some(c => c >= 3);
-        const hasTwo = Object.values(counts).some(c => c >= 2);
-        return hasThree && hasTwo;
-      case 'consecutive':
-        const unique = [...new Set(values)].sort((a, b) => a - b);
-        let consecutive = 1;
-        let maxConsecutive = 1;
-        for (let i = 1; i < unique.length; i++) {
-          if (unique[i] === unique[i-1] + 1) {
-            consecutive++;
-            maxConsecutive = Math.max(maxConsecutive, consecutive);
-          } else {
-            consecutive = 1;
-          }
-        }
-        return maxConsecutive >= (category.consecutiveCount || 0);
-      case 'fallback':
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * 计算基础分
-   */
-  _calculateBase(values, category) {
-    const sum = values.reduce((a, b) => a + b, 0);
-    let bonus = 0;
+  _getBaseFormulaText(category) {
+    const sumPart = '骰子之和';
 
     if (category.bonusType === 'multiplier') {
-      // 豹子的倍率在后续计算，这里不加
-      bonus = 0;
+      return `${sumPart} × ${category.bonusValue}`;
     } else if (category.bonusType === 'flat') {
-      bonus = category.bonusValue || 0;
+      const bonus = category.bonusValue || 0;
+      return bonus > 0 ? `${sumPart} + ${bonus}` : sumPart;
     }
-
-    return sum + bonus;
+    return sumPart;
   }
 
   /**
-   * 计算匹配的骰子数量
+   * 获取被动对分类的影响描述
    */
-  _calcMatchedCount(category, values) {
-    if (category.matchType === 'all_same') {
-      return values.length;
-    } else if (category.matchType === 'same_value') {
-      const targetValue = values[0];
-      return values.filter(v => v === targetValue).length;
-    } else if (category.matchType === 'full_house') {
-      return values.length; // 满堂红所有骰子都参与
-    } else if (category.matchType === 'consecutive') {
-      const unique = [...new Set(values)].sort((a, b) => a - b);
-      let consecutive = 1;
-      let maxConsecutive = 1;
-      for (let i = 1; i < unique.length; i++) {
-        if (unique[i] === unique[i-1] + 1) {
-          consecutive++;
-          maxConsecutive = Math.max(maxConsecutive, consecutive);
-        } else {
-          consecutive = 1;
+  _getPassiveEffectText(category, cheating) {
+    const effects = [];
+    const passives = cheating.getPassives();
+
+    for (const passive of passives) {
+      // 跳过被封印的被动
+      if (cheating.isPassiveSealed(passive.id)) continue;
+
+      // 牌型大师加成
+      if (passive.effectType === 'category_bonus') {
+        const cats = passive.params.categories || [];
+        if (cats.includes(category.id)) {
+          effects.push(`${passive.name} +${passive.params.bonus}`);
         }
       }
-      return Math.min(maxConsecutive, values.length);
+
+      // 连横术加成
+      if (passive.effectType === 'excess_bonus') {
+        effects.push(`${passive.name} 超额+${passive.params.perExcess}`);
+      }
+
+      // 贪欲倍率（所有分类）
+      if (passive.effectType === 'score_multiplier') {
+        effects.push(`${passive.name} ×${passive.params.multiplier}`);
+      }
+
+      // 反转审判
+      if (passive.effectType === 'victory_reverse') {
+        effects.push(`${passive.name} 目标×${passive.params.threshold}`);
+      }
+
+      // 强夺令
+      if (passive.effectType === 'category_override') {
+        effects.push(`${passive.name} 强制${passive.params.forceCategory}`);
+      }
     }
-    return values.length;
+
+    return effects.length > 0
+      ? effects.map(e => `<span class="has-bonus">${e}</span>`).join('<br>')
+      : '<span class="none">-</span>';
   }
 
   /**
