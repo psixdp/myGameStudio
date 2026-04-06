@@ -160,6 +160,17 @@
     "tags": ["category_modify", "rule_break"]
   },
   {
+    "id": "heaven_dice",
+    "name": "天降骰",
+    "type": "passive",
+    "cost": 5,
+    "effectType": "flat_bonus",
+    "params": { "bonus": 15 },
+    "description": "基础分数+15，且此被动无法被封印",
+    "tags": ["scoring", "unsealable", "rule_break"],
+    "unsealable": true
+  },
+  {
     "id": "judgment_flip",
     "name": "反转审判",
     "type": "passive",

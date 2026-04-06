@@ -157,6 +157,7 @@ class CheatingAbilities {
   /**
    * Seal the most expensive passive (enemy rule).
    * If multiple passives share the highest cost, randomly pick one.
+   * Passives with unsealable: true are excluded from sealing.
    */
   sealMostExpensivePassive() {
     if (this._passives.length === 0) {
@@ -164,14 +165,25 @@ class CheatingAbilities {
       return;
     }
 
-    // Find highest cost
+    // Filter out unsealable passives - rule break!
+    const sealable = this._passives.filter(p => {
+      const def = this._dataConfig.getAbility(p.id);
+      return def && !def.unsealable;
+    });
+
+    if (sealable.length === 0) {
+      this._sealedPassiveId = null;
+      return;
+    }
+
+    // Find highest cost among sealable passives
     let maxCost = -1;
-    for (const p of this._passives) {
+    for (const p of sealable) {
       if (p.actualCost > maxCost) maxCost = p.actualCost;
     }
 
     // Collect all with max cost
-    const candidates = this._passives.filter(p => p.actualCost === maxCost);
+    const candidates = sealable.filter(p => p.actualCost === maxCost);
 
     // Pick one (randomly if multiple)
     const sealed = candidates.length === 1
