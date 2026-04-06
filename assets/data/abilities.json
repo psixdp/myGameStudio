@@ -50,6 +50,46 @@
     "tags": ["targeted"]
   },
   {
+    "id": "swap_dice",
+    "name": "换位",
+    "type": "consumable",
+    "cost": 1,
+    "effectType": "swap_values",
+    "params": {},
+    "description": "交换两个骰子的值",
+    "tags": ["targeted_dual"]
+  },
+  {
+    "id": "gamble",
+    "name": "赌博",
+    "type": "consumable",
+    "cost": 1,
+    "effectType": "gamble_reroll",
+    "params": { "goodValue": 6, "badValue": 1, "chance": 0.5 },
+    "description": "50%概率全骰变6，50%概率全骰变1",
+    "tags": ["risk"]
+  },
+  {
+    "id": "freeze_die",
+    "name": "冻结",
+    "type": "consumable",
+    "cost": 2,
+    "effectType": "freeze_die",
+    "params": {},
+    "description": "冻结一个骰子，下轮保留其值",
+    "tags": ["persistent", "targeted"]
+  },
+  {
+    "id": "invert_dice",
+    "name": "反转",
+    "type": "consumable",
+    "cost": 2,
+    "effectType": "invert_value",
+    "params": { "sumValue": 7 },
+    "description": "骰子值变为 (7-原值)，如1→6, 3→4",
+    "tags": ["targeted"]
+  },
+  {
     "id": "loaded_dice",
     "name": "铅骰",
     "type": "passive",

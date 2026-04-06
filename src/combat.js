@@ -66,6 +66,9 @@ class Combat {
     this._cheating.resetRoundState();
     this._cheating.clearSealedPassive();
 
+    // Clear frozen state from previous round at start of new roll
+    this._dice.clearFrozenDice();
+
     // Step 1: Load enemy
     this._stepLog.push('step1_load_enemy');
     this._enemy.loadForRound(round);

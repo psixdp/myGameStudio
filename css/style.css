@@ -243,6 +243,28 @@ body {
   transform: scale(1.1);
 }
 
+/* 第二个选中的骰子（用于换位） */
+.die.selected-2 {
+  background: linear-gradient(145deg, #9b59b6, #8e44ad);
+  color: white;
+  box-shadow: 0 0 20px rgba(155, 89, 182, 0.8);
+  transform: scale(1.1);
+}
+
+/* 冻结的骰子（跨轮保留） */
+.die.frozen {
+  background: linear-gradient(145deg, #a8d8ff, #5dade2);
+  box-shadow: 0 0 15px rgba(93, 173, 234, 0.9);
+  border: 2px solid #3498db;
+}
+.die.frozen::after {
+  content: "❄️";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 12px;
+}
+
 /* 出千微调动画 - 骰子偷偷被拨动 */
 .die.nudge {
   animation: nudge-cheat 0.3s ease-out;
