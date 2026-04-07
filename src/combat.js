@@ -120,13 +120,23 @@ class Combat {
       adjustedBase
     };
 
+    // Calculate preliminary score with multipliers (for UI display)
+    // This allows players to see their final score before confirming
+    const matchedCount = this._calcMatchedCount(matchedCategory, this._dice.getValues());
+    const flatBonus = this._cheating.getFlatBonuses(matchedCategory, this._dice, matchedCount);
+    const multiplier = this._cheating.getMultipliers();
+    const score = Math.floor((adjustedBase + flatBonus) * multiplier);
+
     return {
       dice: this._dice.getDice(),
       diceValues: this._dice.getValues(),
       baseScore,
       adjustedBase,
       matchedCategory,
-      targetScore
+      targetScore,
+      score,  // Final score with multipliers applied
+      flatBonus,
+      multiplier
     };
   }
 
@@ -370,13 +380,22 @@ class Combat {
       adjustedBase
     };
 
+    // Calculate score with multipliers (for UI display)
+    const matchedCount = this._calcMatchedCount(matchedCategory, this._dice.getValues());
+    const flatBonus = this._cheating.getFlatBonuses(matchedCategory, this._dice, matchedCount);
+    const multiplier = this._cheating.getMultipliers();
+    const score = Math.floor((adjustedBase + flatBonus) * multiplier);
+
     return {
       dice: this._dice.getDice(),
       diceValues: this._dice.getValues(),
       baseScore,
       adjustedBase,
       matchedCategory,
-      targetScore: info.targetScore
+      targetScore: info.targetScore,
+      score,  // Final score with multipliers applied
+      flatBonus,
+      multiplier
     };
   }
 
