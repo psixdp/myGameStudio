@@ -976,8 +976,10 @@ class GameUI {
     const dataConfig = this._gameFlow.getDataConfig();
     const cheating = this._gameFlow.getCheating();
 
-    // 隐藏当前骰子显示（基础规则不需要）
-    this._elements.scoringDiceValues.textContent = '';
+    // 隐藏当前骰子显示（基础规则不需要）- 如果元素存在
+    if (this._elements.scoringDiceValues) {
+      this._elements.scoringDiceValues.textContent = '';
+    }
 
     // 显示被动能力列表
     const passives = cheating.getPassives();
