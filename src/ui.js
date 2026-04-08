@@ -17,7 +17,8 @@ class GameUI {
     this._selectedConsumableIndex = null;
     this._selectedPassiveIndex = null;
     this._isRolling = false;
-    this._pendingResult = null;  // 待确认的投掷结果
+    this._pendingRollResult = null;  // 待确认的投掷结果
+    this._activeDetail = null;  // 当前打开的详情 { type, index }
 
     // Target selection state
     this._isSelectingTarget = false;  // 是否正在选择骰子目标
@@ -67,14 +68,16 @@ class GameUI {
 
       // Inventory
       consumablesList: document.getElementById('consumables-list'),
-      consumablePreview: document.getElementById('consumable-preview'),
-      consumablePreviewName: document.getElementById('consumable-preview-name'),
-      consumablePreviewDesc: document.getElementById('consumable-preview-desc'),
-      consumablePreviewEffect: document.getElementById('consumable-preview-effect'),
       passivesList: document.getElementById('passives-list'),
-      passivePreview: document.getElementById('passive-preview'),
-      passivePreviewName: document.getElementById('passive-preview-name'),
-      passivePreviewDesc: document.getElementById('passive-preview-desc'),
+
+      // Detail overlay
+      detailOverlay: document.getElementById('detail-overlay'),
+      detailPanel: document.getElementById('detail-panel'),
+      btnCloseDetail: document.getElementById('btn-close-detail'),
+      detailTitle: document.getElementById('detail-title'),
+      detailSubtitle: document.getElementById('detail-subtitle'),
+      detailDescription: document.getElementById('detail-description'),
+      detailEffect: document.getElementById('detail-effect'),
 
       // Actions
       btnRoll: document.getElementById('btn-roll'),
@@ -123,11 +126,20 @@ class GameUI {
     this._elements.btnRestart.addEventListener('click', () => this._onRestart());
     this._elements.btnScoringRules.addEventListener('click', () => this._onShowScoringRules());
     this._elements.btnCloseScoringRules.addEventListener('click', () => this._onCloseScoringRules());
+    this._elements.btnCloseDetail.addEventListener('click', () => this._closeDetail());
+    this._elements.detailOverlay.addEventListener('click', (e) => {
+      if (e.target === this._elements.detailOverlay) this._closeDetail();
+    });
+    document.addEventListener('keydown', (e) => this._onGlobalKeydown(e));
   }
 
   /** ==================== 渲染主入口 ==================== */
   async _render() {
     const state = this._gameFlow.getState();
+
+    if (state === GameState.SHOP || state === GameState.VICTORY || state === GameState.DEFEAT) {
+      this._closeDetail();
+    }
 
     // 清理选择模式（如果不在投掷后中间状态）
     if (!this._isPostRollState(state)) {
@@ -190,7 +202,7 @@ class GameUI {
 
     const gap = result.targetScore - result.score;
     if (gap > 0) {
-      this._elements.resultStatus.innerHTML = `⚠️ 还差 ${gap} 分 - 可使用消耗品改写骰子`;
+      this._elements.resultStatus.innerHTML = `⚠️ 还差 ${gap} 分，可出千改写`;
       this._elements.resultStatus.className = 'result-status warning';
     } else {
       this._elements.resultStatus.innerHTML = `✓ 分数已达标！`;
@@ -238,8 +250,8 @@ class GameUI {
       // 投掷完成但未确认：只显示分数对比，不显示胜负
       this._elements.currentScore.textContent = result.score;
       this._elements.targetScoreDisplay.textContent = result.targetScore;
-      this._elements.resultStatus.textContent = '';  // 暂不显示胜负
-      this._elements.resultStatus.className = 'result-status';
+      this._elements.resultStatus.textContent = '可继续使用消耗品后再确认结果';
+      this._elements.resultStatus.className = 'result-status placeholder';
       this._elements.categoryName.textContent = this._getCategoryDisplayName(result.matchedCategory);
     } else if (result && this._resultConfirmed) {
       // 已确认：显示胜负结果，然后进入下一阶段
@@ -265,8 +277,8 @@ class GameUI {
       // 未投掷
       this._elements.currentScore.textContent = '0';
       this._elements.targetScoreDisplay.textContent = enemy.getTargetScore();
-      this._elements.resultStatus.textContent = '';
-      this._elements.resultStatus.className = 'result-status';
+      this._elements.resultStatus.textContent = '等待投掷';
+      this._elements.resultStatus.className = 'result-status placeholder';
       this._elements.categoryName.textContent = '准备投掷';
     }
 
@@ -283,10 +295,11 @@ class GameUI {
   _renderWeakness(cheating) {
     const weaknessCategory = cheating.getWeaknessCategory();
     if (weaknessCategory) {
-      this._elements.weaknessDisplay.classList.remove('hidden');
       this._elements.weaknessCategory.textContent = this._getCategoryDisplayName(weaknessCategory);
+      this._elements.weaknessDisplay.classList.remove('muted');
     } else {
-      this._elements.weaknessDisplay.classList.add('hidden');
+      this._elements.weaknessCategory.textContent = '未揭示';
+      this._elements.weaknessDisplay.classList.add('muted');
     }
   }
 
@@ -294,15 +307,15 @@ class GameUI {
   _renderEnemyRules(enemy) {
     const rules = enemy.getRules();
     if (rules.length === 0) {
-      this._elements.enemyRules.textContent = '';
-      this._elements.enemyRules.classList.add('hidden');
+      this._elements.enemyRules.textContent = '⚠️ 本轮无特殊规则';
+      this._elements.enemyRules.classList.add('muted');
       return;
     }
 
-    this._elements.enemyRules.classList.remove('hidden');
-    this._elements.enemyRules.innerHTML = rules
-      .map(r => `<div>⚠️ ${r.name}: ${r.description}</div>`)
-      .join('');
+    this._elements.enemyRules.classList.remove('muted');
+    this._elements.enemyRules.textContent = rules
+      .map(r => `⚠️ ${r.name}: ${r.description}`)
+      .join(' ｜ ');
   }
 
   /** 渲染骰子 */
@@ -342,7 +355,7 @@ class GameUI {
 
     if (consumables.length === 0) {
       this._elements.consumablesList.innerHTML = '<span style="color:#666;font-style:italic;">（空）</span>';
-      this._elements.consumablePreview.classList.add('hidden');
+      if (this._activeDetail?.type === 'consumable') this._closeDetail();
       return;
     }
 
@@ -357,41 +370,9 @@ class GameUI {
       this._elements.consumablesList.appendChild(card);
     });
 
-    // 渲染选中消耗品的预览
-    this._renderConsumablePreview(consumables);
-  }
-
-  /** 渲染选中消耗品的预览 */
-  _renderConsumablePreview(consumables) {
-    if (this._selectedConsumableIndex === null || this._selectedConsumableIndex >= consumables.length) {
-      this._elements.consumablePreview.classList.add('hidden');
-      return;
+    if (this._activeDetail?.type === 'consumable') {
+      this._renderDetailOverlay();
     }
-
-    const item = consumables[this._selectedConsumableIndex];
-    this._elements.consumablePreview.classList.remove('hidden');
-    this._elements.consumablePreviewName.textContent = item.name;
-    this._elements.consumablePreviewDesc.textContent = item.description;
-
-    // 显示效果预览
-    let effectText = '';
-    if (item.tags && item.tags.includes('targeted_dual')) {
-      effectText = '🎯 需要选择两个骰子交换';
-    } else if (item.tags && item.tags.includes('targeted')) {
-      effectText = '🎯 需要选择目标骰子';
-    } else if (item.tags && item.tags.includes('universal')) {
-      effectText = '🎯 需要选择目标骰子（将设为6点）';
-    } else if (item.tags && item.tags.includes('information')) {
-      effectText = 'ℹ️ 查看信息';
-    } else if (item.tags && item.tags.includes('reroll')) {
-      effectText = '🔄 重新投掷全部骰子';
-    } else if (item.tags && item.tags.includes('risk')) {
-      effectText = '🎲 高风险：50%全6或全1';
-    } else if (item.tags && item.tags.includes('persistent')) {
-      effectText = '❄️ 跨轮生效：下轮保留该骰子';
-    }
-
-    this._elements.consumablePreviewEffect.textContent = effectText;
   }
 
   /** 渲染被动能力 */
@@ -400,7 +381,7 @@ class GameUI {
 
     if (passives.length === 0) {
       this._elements.passivesList.innerHTML = '<span style="color:#666;font-style:italic;">（空）</span>';
-      this._elements.passivePreview?.classList.add('hidden');
+      if (this._activeDetail?.type === 'passive') this._closeDetail();
       return;
     }
 
@@ -415,27 +396,16 @@ class GameUI {
       this._elements.passivesList.appendChild(card);
     });
 
-    // 渲染选中被动能力的预览
-    this._renderPassivePreview(passives);
+    if (this._activeDetail?.type === 'passive') {
+      this._renderDetailOverlay();
+    }
   }
 
   /** 选择被动能力 */
   _onSelectPassive(index) {
     this._selectedPassiveIndex = index;
     this._renderPassives(this._gameFlow.getCheating().getPassives());
-  }
-
-  /** 渲染选中被动能力的预览 */
-  _renderPassivePreview(passives) {
-    if (this._selectedPassiveIndex === null || this._selectedPassiveIndex >= passives.length) {
-      this._elements.passivePreview?.classList.add('hidden');
-      return;
-    }
-
-    const item = passives[this._selectedPassiveIndex];
-    this._elements.passivePreview.classList.remove('hidden');
-    this._elements.passivePreviewName.textContent = item.name;
-    this._elements.passivePreviewDesc.textContent = item.description;
+    this._openDetail('passive', index);
   }
 
   /** ==================== 商店渲染 ==================== */
@@ -670,6 +640,7 @@ class GameUI {
 
     this._selectedConsumableIndex = index;
     this._renderConsumables(consumables);
+    this._openDetail('consumable', index);
 
     // 检查是否是需要选择目标的消耗品
     const selected = consumables[index];
@@ -892,6 +863,7 @@ class GameUI {
     this._gameFlow.newGame();
     this._isRolling = false;
     this._selectedConsumableIndex = null;
+    this._closeDetail();
     this._render();
   }
 
@@ -937,6 +909,61 @@ class GameUI {
         toast.remove();
       }
     }, duration);
+  }
+
+  _onGlobalKeydown(e) {
+    if (e.key !== 'Escape') return;
+    if (!this._elements.detailOverlay.classList.contains('hidden')) {
+      this._closeDetail();
+      return;
+    }
+    if (!this._elements.scoringRulesOverlay.classList.contains('hidden')) {
+      this._onCloseScoringRules();
+    }
+  }
+
+  _openDetail(type, index) {
+    this._activeDetail = { type, index };
+    this._renderDetailOverlay();
+    this._elements.detailOverlay.classList.remove('hidden');
+  }
+
+  _closeDetail() {
+    this._activeDetail = null;
+    this._elements.detailOverlay.classList.add('hidden');
+  }
+
+  _renderDetailOverlay() {
+    if (!this._activeDetail) return;
+    const cheating = this._gameFlow.getCheating();
+    const pool = this._activeDetail.type === 'consumable'
+      ? cheating.getConsumables()
+      : cheating.getPassives();
+    const item = pool[this._activeDetail.index];
+
+    if (!item) {
+      this._closeDetail();
+      return;
+    }
+
+    this._elements.detailTitle.textContent = item.name;
+    this._elements.detailSubtitle.textContent =
+      `${this._activeDetail.type === 'consumable' ? '消耗品' : '被动能力'} · 成本 ${item.cost ?? '-'}`;
+    this._elements.detailDescription.textContent = item.description || '无描述';
+    this._elements.detailEffect.textContent = this._getItemEffectHint(item);
+  }
+
+  _getItemEffectHint(item) {
+    if (!item) return '-';
+    if (item.effectType === 'flat_bonus') return `效果：基础分 +${item.params?.bonus ?? 0}`;
+    if (item.effectType === 'score_multiplier') return `效果：最终分数 ×${item.params?.multiplier ?? 1}`;
+    if (item.tags?.includes('targeted_dual')) return '效果：需要选择两个骰子作为目标';
+    if (item.tags?.includes('targeted')) return '效果：需要选择一个骰子作为目标';
+    if (item.tags?.includes('universal')) return '效果：可作用于任意骰子';
+    if (item.tags?.includes('information')) return '效果：提供战斗信息或弱点信息';
+    if (item.tags?.includes('reroll')) return '效果：重掷或追加投掷机会';
+    if (item.tags?.includes('persistent')) return '效果：跨回合持续生效';
+    return `效果类型：${item.effectType || '未知'}`;
   }
 
   _getCategoryDisplayName(categoryId) {
