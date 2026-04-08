@@ -9,9 +9,44 @@ import { DATA } from './data-bundle.js';
  */
 class DataConfig {
   constructor() {
-    this._data = DATA;
+    this._data = {};
     this._warnings = [];
+  }
+
+  /**
+   * Load config data in browser.
+   * Prefer live JSON files under assets/data for consistency with source of truth.
+   * Fallback to bundled DATA when fetch is unavailable or fails.
+   */
+  async load(dataDir = 'assets/data') {
+    const files = [
+      'global-config.json',
+      'scoring-categories.json',
+      'abilities.json',
+      'enemies.json',
+      'enemy-rules.json',
+      'economy.json',
+    ];
+
+    try {
+      const loaded = {};
+      for (const file of files) {
+        const response = await fetch(`${dataDir}/${file}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load ${file}: ${response.status}`);
+        }
+        const parsed = await response.json();
+        const key = file.replace('.json', '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+        loaded[key] = parsed;
+      }
+      this._data = loaded;
+    } catch (err) {
+      console.warn('[DataConfig] Falling back to bundled DATA:', err);
+      this._data = DATA;
+    }
+
     this._buildIndices();
+    return this;
   }
 
   /** Build lookup indices for fast querying. */
@@ -150,11 +185,6 @@ class DataConfig {
     return [...this._warnings];
   }
 
-  /** Browser version: data is bundled at construction time. */
-  load() {
-    // No-op for browser version
-    return this;
-  }
 }
 
 export { DataConfig };

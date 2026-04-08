@@ -240,6 +240,11 @@ class CheatingAbilities {
           total += passive.params.bonus || 0;
         }
       }
+
+      // 天降骰 (heaven_dice) - universal flat bonus
+      if (passive.effectType === 'flat_bonus') {
+        total += passive.params.bonus || 0;
+      }
     }
 
     // 透视 (insight) - weakness category bonus

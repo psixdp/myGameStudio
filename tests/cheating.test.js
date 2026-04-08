@@ -17,6 +17,7 @@ function makeCheatingSystem() {
       { id: 'loaded_dice', name: '铅骰', type: 'passive', cost: 4, effectType: 'dice_floor', params: { minValue: 2 }, description: '铅骰' },
       { id: 'chain_link', name: '连横术', type: 'passive', cost: 4, effectType: 'excess_bonus', params: { perExcess: 5 }, description: '连横术' },
       { id: 'pattern_master', name: '牌型大师', type: 'passive', cost: 4, effectType: 'category_bonus', params: { categories: ['full_house', 'yahtzee', 'three_of_a_kind'], bonus: 20 }, description: '牌型大师' },
+      { id: 'heaven_dice', name: '天降骰', type: 'passive', cost: 5, effectType: 'flat_bonus', params: { bonus: 15 }, description: '天降骰', unsealable: true },
       { id: 'greed', name: '贪欲', type: 'passive', cost: 3, effectType: 'score_multiplier', params: { multiplier: 2.0 }, description: '贪欲' }
     ],
     scoringCategories: [
@@ -239,6 +240,28 @@ describe('AC-8: Pattern master category bonus', () => {
     const category = { id: 'yahtzee', minDice: 5 };
     const bonus = sys.getFlatBonuses(category, makeMockDicePool([6, 6, 6, 6, 6]), 5);
     assert.strictEqual(bonus, 20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC-8.5: Heaven dice flat bonus (+15)
+// ---------------------------------------------------------------------------
+describe('AC-8.5: Heaven dice flat bonus', () => {
+  it('adds +15 for any matched category', () => {
+    const sys = makeCheatingSystem();
+    sys.addPassive('heaven_dice', 5);
+    const category = { id: 'pair', minDice: 2 };
+    const bonus = sys.getFlatBonuses(category, makeMockDicePool([3, 3, 4, 5]), 2);
+    assert.strictEqual(bonus, 15);
+  });
+
+  it('stacks with category bonus passives', () => {
+    const sys = makeCheatingSystem();
+    sys.addPassive('heaven_dice', 5);
+    sys.addPassive('pattern_master', 4);
+    const category = { id: 'three_of_a_kind', minDice: 3 };
+    const bonus = sys.getFlatBonuses(category, makeMockDicePool([4, 4, 4, 2]), 3);
+    assert.strictEqual(bonus, 35); // 15 + 20
   });
 });
 
