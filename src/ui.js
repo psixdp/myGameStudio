@@ -56,6 +56,7 @@ class GameUI {
       weaknessDisplay: document.getElementById('weakness-display'),
       weaknessCategory: document.getElementById('weakness-category'),
       enemyRules: document.getElementById('enemy-rules'),
+      decreeOverrideDisplay: document.getElementById('decree-override-display'),
 
       // Battle
       diceContainer: document.getElementById('dice-container'),
@@ -238,6 +239,7 @@ class GameUI {
     this._elements.targetScore.textContent = enemy.getTargetScore();
     this._renderWeakness(cheating);
     this._renderEnemyRules(enemy);
+    this._renderDecreeOverride(cheating);  // 显示强夺令强制分类
 
     // 骰子
     this._renderDice(dicePool.getDice());
@@ -316,6 +318,17 @@ class GameUI {
     this._elements.enemyRules.textContent = rules
       .map(r => `⚠️ ${r.name}: ${r.description}`)
       .join(' ｜ ');
+  }
+
+  /** 渲染强夺令强制分类 */
+  _renderDecreeOverride(cheating) {
+    const decreePassive = cheating.getPassiveByEffect('category_override');
+    if (decreePassive && decreePassive.params.forcedCategoryName) {
+      this._elements.decreeOverrideDisplay.textContent = `💪 强夺令：强制匹配${decreePassive.params.forcedCategoryName}`;
+      this._elements.decreeOverrideDisplay.classList.remove('muted');
+    } else {
+      this._elements.decreeOverrideDisplay.classList.add('muted');
+    }
   }
 
   /** 渲染骰子 */
@@ -763,9 +776,9 @@ class GameUI {
           const rng = this._gameFlow.getRNG().getStream('dice');
           const isLucky = rng.nextFloat() < ability.params.chance;
           const newValue = isLucky ? ability.params.goodValue : ability.params.badValue;
-          dice.forEach((d, i) => {
-            d.value = newValue;
-          });
+          for (let i = 0; i < dice.length; i++) {
+            dicePool.setDie(i, newValue);
+          }
           effectMessage = isLucky ? `赌博：大成功！全骰变为6` : `赌博：失败...全骰变为1`;
           // 对所有骰子添加微调动画
           diceElements.forEach(d => d.classList.add('nudge'));

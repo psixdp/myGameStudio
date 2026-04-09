@@ -96,6 +96,7 @@ class CheatingAbilities {
   /**
    * Add a passive ability (from shop).
    * Cannot own duplicates of the same passive.
+   * For decree_override (强夺令), randomize the forced category.
    * @param {string} abilityId - ability ID
    * @param {number} actualCost - actual cost paid (for seal judgment)
    * @returns {boolean} success (false if already owned)
@@ -107,7 +108,23 @@ class CheatingAbilities {
     const ability = this._dataConfig.getAbility(abilityId);
     if (!ability || ability.type !== 'passive') return false;
 
-    this._passives.push({ ...ability, actualCost });
+    const passiveToAdd = { ...ability, actualCost };
+
+    // Special handling for decree_override: randomize forced category
+    if (abilityId === 'decree_override') {
+      const categories = this._dataConfig.getCategories().filter(c => c.matchType !== 'fallback');
+      if (categories.length > 0) {
+        const idx = this._cloneStream.nextInt(0, categories.length - 1);
+        const forcedCat = categories[idx];
+        passiveToAdd.params = {
+          ...ability.params,
+          forceCategory: forcedCat.id,
+          forcedCategoryName: forcedCat.name  // For UI display
+        };
+      }
+    }
+
+    this._passives.push(passiveToAdd);
     return true;
   }
 
