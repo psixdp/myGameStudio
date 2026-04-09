@@ -335,6 +335,34 @@ class Combat {
         this._rollWithClone();
         break;
 
+      case 'gamble_reroll':
+        // 50% all dice become goodValue, 50% all dice become badValue
+        {
+          const stream = this._rng.getStream('gamble');
+          const dice = this._dice.getValues();
+          const roll = stream.nextFloat();
+          const targetValue = roll < ability.params.chance ? ability.params.goodValue : ability.params.badValue;
+          for (let i = 0; i < dice.length; i++) {
+            this._dice.setDie(i, targetValue);
+          }
+        }
+        break;
+
+      case 'swap_values':
+        // Swap values of two dice (for testing, swap die 0 and 1)
+        this._dice.swapDice(0, 1);
+        break;
+
+      case 'invert_value':
+        // Invert die value (for testing, invert die 0)
+        this._dice.invertDie(0, ability.params.sumValue);
+        break;
+
+      case 'freeze_die':
+        // Freeze a die (for testing, freeze die 0)
+        this._dice.freezeDie(0);
+        break;
+
       case 'reveal_weakness':
         // Already handled in cheating.useConsumable()
         break;
@@ -449,22 +477,53 @@ class Combat {
         for (const v of values) freq2[v] = (freq2[v] || 0) + 1;
         return Object.values(freq2).some(c => c >= (cat.matchCount || 2));
       case 'consecutive':
-        const sorted = [...new Set(values)].sort((a, b) => a - b);
-        let run = 1;
-        for (let i = 1; i < sorted.length; i++) {
-          if (sorted[i] === sorted[i - 1] + 1) {
-            run++;
-            if (run >= (cat.matchCount || 4)) return true;
-          } else {
-            run = 1;
-          }
-        }
-        return false;
+        // Check if loose_consecutive passive is active
+        const hasLoose = this._cheating.getPassiveByEffect('loose_consecutive') !== null;
+        return this._checkConsecutive(values, cat.matchCount || 4, hasLoose);
       case 'fallback':
         return true;
       default:
         return false;
     }
+  }
+
+  /**
+   * Check if values form a consecutive sequence.
+   * @param {number[]} values - dice values
+   * @param {number} length - required consecutive length (4 for small straight, 5 for large)
+   * @param {boolean} allowGap - if true, allow gaps (顺子眼)
+   * @returns {boolean}
+   */
+  _checkConsecutive(values, length, allowGap = false) {
+    const maxGap = allowGap ? (this._cheating.getPassiveByEffect('loose_consecutive')?.params?.maxGap || 0) : 0;
+    const unique = [...new Set(values)].sort((a, b) => a - b);
+
+    // If no gaps allowed, use original logic
+    if (maxGap === 0) {
+      let run = 1;
+      for (let i = 1; i < unique.length; i++) {
+        if (unique[i] === unique[i - 1] + 1) {
+          run++;
+          if (run >= length) return true;
+        } else {
+          run = 1;
+        }
+      }
+      return false;
+    }
+
+    // With gaps allowed, check if we can form a sequence with allowable gaps
+    // A sequence of length N with maxGap allows max span of N + (N-1)*maxGap
+    if (unique.length < length) return false;
+
+    // Try sliding window: for each starting position
+    for (let i = 0; i <= unique.length - length; i++) {
+      const start = unique[i];
+      const end = unique[i + length - 1];
+      const maxAllowedSpan = (length - 1) + (length - 1) * maxGap;
+      if (end - start <= maxAllowedSpan) return true;
+    }
+    return false;
   }
 
   /** Calculate base score for a category. */
