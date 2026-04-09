@@ -335,6 +335,34 @@ class Combat {
         this._rollWithClone();
         break;
 
+      case 'gamble_reroll':
+        // 50% all dice become goodValue, 50% all dice become badValue
+        {
+          const stream = this._rng.getStream('gamble');
+          const dice = this._dice.getValues();
+          const roll = stream.nextFloat();
+          const targetValue = roll < ability.params.chance ? ability.params.goodValue : ability.params.badValue;
+          for (let i = 0; i < dice.length; i++) {
+            this._dice.setDie(i, targetValue);
+          }
+        }
+        break;
+
+      case 'swap_values':
+        // Swap values of two dice (for testing, swap die 0 and 1)
+        this._dice.swapDice(0, 1);
+        break;
+
+      case 'invert_value':
+        // Invert die value (for testing, invert die 0)
+        this._dice.invertDie(0, ability.params.sumValue);
+        break;
+
+      case 'freeze_die':
+        // Freeze a die (for testing, freeze die 0)
+        this._dice.freezeDie(0);
+        break;
+
       case 'reveal_weakness':
         // Already handled in cheating.useConsumable()
         break;
