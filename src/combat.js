@@ -72,7 +72,13 @@ class Combat {
     // Step 1: Load enemy
     this._stepLog.push('step1_load_enemy');
     this._enemy.loadForRound(round);
-    const targetScore = this._enemy.getTargetScore();
+    let targetScore = this._enemy.getTargetScore();
+
+    // Apply 魔鬼契约 penalty from previous round
+    const targetIncrease = this._cheating.consumeNextRoundTargetIncrease();
+    if (targetIncrease > 0) {
+      targetScore = Math.floor(targetScore * (1 + targetIncrease));
+    }
 
     // Handle seal_passive rule
     if (this._enemy.hasSealPassiveRule()) {
@@ -125,7 +131,7 @@ class Combat {
     // This allows players to see their final score before confirming
     const matchedCount = this._calcMatchedCount(matchedCategory, this._dice.getValues());
     const flatBonus = this._cheating.getFlatBonuses(matchedCategory, this._dice, matchedCount);
-    const multiplier = this._cheating.getMultipliers();
+    const multiplier = this._cheating.getMultipliers(matchedCategory, this._dice);
     const score = Math.floor((adjustedBase + flatBonus) * multiplier);
 
     return {
@@ -161,7 +167,7 @@ class Combat {
       this._dice,
       matchedCount
     );
-    const multiplier = this._cheating.getMultipliers();
+    const multiplier = this._cheating.getMultipliers(info.matchedCategory, this._dice);
     const finalScore = Math.floor((info.adjustedBase + flatBonus) * multiplier);
 
     // Step 12: Victory determination
@@ -363,6 +369,21 @@ class Combat {
       case 'reveal_weakness':
         // Already handled in cheating.useConsumable()
         break;
+
+      case 'temp_multiplier_penalty':
+        // 魔鬼契约: add temporary round multiplier + penalty for next round
+        this._cheating.addRoundMultiplier(ability.params.multiplier || 1.5);
+        this._cheating.addNextRoundTargetIncrease(ability.params.nextRoundTargetIncrease || 0.25);
+        break;
+
+      case 'sacrifice_consumables':
+        // 孤注一掷: destroy all remaining consumables for flat bonus
+        {
+          const sacrificed = this._cheating.sacrificeAllConsumables();
+          const bonusPerSac = ability.params.bonusPerSacrifice || 8;
+          this._cheating.addRoundFlatBonus(sacrificed * bonusPerSac);
+        }
+        break;
     }
 
     return ability;
@@ -408,7 +429,7 @@ class Combat {
     // Calculate score with multipliers (for UI display)
     const matchedCount = this._calcMatchedCount(matchedCategory, this._dice.getValues());
     const flatBonus = this._cheating.getFlatBonuses(matchedCategory, this._dice, matchedCount);
-    const multiplier = this._cheating.getMultipliers();
+    const multiplier = this._cheating.getMultipliers(matchedCategory, this._dice);
     const score = Math.floor((adjustedBase + flatBonus) * multiplier);
 
     return {

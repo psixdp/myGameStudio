@@ -199,5 +199,85 @@
     "params": { "count": 1, "initialValue": 6 },
     "description": "骰子池永久+1，新骰子初始固定为6（仅首次）",
     "tags": ["expansion"]
+  },
+  {
+    "id": "perfectionist",
+    "name": "完美主义者",
+    "type": "passive",
+    "cost": 4,
+    "effectType": "high_dice_multiplier",
+    "params": { "multiplier": 1.5, "minValue": 4 },
+    "description": "所有骰子≥4时，最终分数×1.5",
+    "tags": ["multiplier", "conditional"]
+  },
+  {
+    "id": "straight_momentum",
+    "name": "顺势而为",
+    "type": "passive",
+    "cost": 4,
+    "effectType": "straight_multiplier",
+    "params": { "multiplier": 1.6, "categories": ["small_straight", "large_straight"] },
+    "description": "匹配小顺或大顺时，最终分数×1.6",
+    "tags": ["multiplier", "conditional"]
+  },
+  {
+    "id": "double_vision",
+    "name": "双重视界",
+    "type": "passive",
+    "cost": 3,
+    "effectType": "pair_value_bonus",
+    "params": { "perPairMultiplier": 3 },
+    "description": "匹配对子时，每组对子+(对子点数×3)加成",
+    "tags": ["scoring", "conditional"]
+  },
+  {
+    "id": "rainbow",
+    "name": "七彩奖励",
+    "type": "passive",
+    "cost": 4,
+    "effectType": "scatter_diversity_bonus",
+    "params": { "perUnique": 6 },
+    "description": "匹配散牌时，每种不同点数+6加成",
+    "tags": ["scoring", "conditional"]
+  },
+  {
+    "id": "lucky_six",
+    "name": "逢六大吉",
+    "type": "passive",
+    "cost": 4,
+    "effectType": "six_count_multiplier",
+    "params": { "perSixMultiplier": 1.15 },
+    "description": "每有1个点数为6的骰子，最终分数×1.15",
+    "tags": ["multiplier", "conditional"]
+  },
+  {
+    "id": "dice_army",
+    "name": "众骰之力",
+    "type": "passive",
+    "cost": 5,
+    "effectType": "dice_count_bonus",
+    "params": { "perDie": 4 },
+    "description": "每颗骰子（含临时骰）+4固定加成",
+    "tags": ["scoring"]
+  },
+  {
+    "id": "devils_bargain",
+    "name": "魔鬼契约",
+    "type": "consumable",
+    "cost": 2,
+    "effectType": "temp_multiplier_penalty",
+    "params": { "multiplier": 1.5, "nextRoundTargetIncrease": 0.25 },
+    "description": "本轮分数×1.5，但下轮目标分数+25%",
+    "tags": ["risk"]
+  },
+  {
+    "id": "all_in",
+    "name": "孤注一掷",
+    "type": "consumable",
+    "cost": 2,
+    "effectType": "sacrifice_consumables",
+    "params": { "bonusPerSacrifice": 8 },
+    "description": "销毁全部剩余消耗品，每个+8加成",
+    "tags": ["risk"]
   }
 ]
