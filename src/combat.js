@@ -66,8 +66,8 @@ class Combat {
     this._cheating.resetRoundState();
     this._cheating.clearSealedPassive();
 
-    // Clear frozen state from previous round at start of new roll
-    this._dice.clearFrozenDice();
+    // Clear temp dice from previous round (clone_dice cleanup)
+    this._dice.clearTempDice();
 
     // Step 1: Load enemy
     this._stepLog.push('step1_load_enemy');
@@ -79,9 +79,10 @@ class Combat {
       this._cheating.sealMostExpensivePassive();
     }
 
-    // Step 2: Roll dice
+    // Step 2: Roll dice (frozen dice skip their roll, then clear flag)
     this._stepLog.push('step2_roll_dice');
     this._rollWithClone();
+    this._dice.clearFrozenDice();
 
     // Step 3: Enemy dice-modifying rules
     this._stepLog.push('step3_enemy_dice_rules');
@@ -306,9 +307,10 @@ class Combat {
    * Use a consumable (called by UI/external code during step 4).
    * This is a simplified interface for testing; real game will have UI-driven loop.
    * @param {number} slotIndex
+   * @param {object} [options] - { targetIndex, targetIndex2, targetValue }
    * @returns {object|null} consumable effect if used
    */
-  useConsumable(slotIndex) {
+  useConsumable(slotIndex, { targetIndex = 0, targetIndex2 = 1, targetValue } = {}) {
     if (!this._cheating.canUseConsumable()) return null;
 
     const ability = this._cheating.useConsumable(slotIndex);
@@ -317,13 +319,11 @@ class Combat {
     // Apply consumable effect
     switch (ability.effectType) {
       case 'set_dice_value':
-        // For testing, assume we set die 0 to max value
-        // Real game will have UI to select die and value
-        this._dice.setDie(0, ability.params.max);
+        this._dice.setDie(targetIndex, targetValue ?? ability.params.max);
         break;
 
       case 'reroll_min':
-        this._dice.rerollDie(0, ability.params.minValue);
+        this._dice.rerollDie(targetIndex, ability.params.minValue);
         break;
 
       case 'replace_lowest':
@@ -349,18 +349,15 @@ class Combat {
         break;
 
       case 'swap_values':
-        // Swap values of two dice (for testing, swap die 0 and 1)
-        this._dice.swapDice(0, 1);
+        this._dice.swapDice(targetIndex, targetIndex2);
         break;
 
       case 'invert_value':
-        // Invert die value (for testing, invert die 0)
-        this._dice.invertDie(0, ability.params.sumValue);
+        this._dice.invertDie(targetIndex, ability.params.sumValue);
         break;
 
       case 'freeze_die':
-        // Freeze a die (for testing, freeze die 0)
-        this._dice.freezeDie(0);
+        this._dice.freezeDie(targetIndex);
         break;
 
       case 'reveal_weakness':

@@ -80,6 +80,10 @@ class GameUI {
       detailDescription: document.getElementById('detail-description'),
       detailEffect: document.getElementById('detail-effect'),
 
+      // Value picker (face change)
+      valuePickerOverlay: document.getElementById('value-picker-overlay'),
+      valuePickerButtons: document.getElementById('value-picker-buttons'),
+
       // Actions
       btnRoll: document.getElementById('btn-roll'),
       btnConfirmResult: document.getElementById('btn-confirm-result'),
@@ -132,6 +136,13 @@ class GameUI {
       if (e.target === this._elements.detailOverlay) this._closeDetail();
     });
     document.addEventListener('keydown', (e) => this._onGlobalKeydown(e));
+
+    // Value picker
+    this._pendingFaceChange = null; // { dieIndex, ability }
+    this._elements.valuePickerOverlay.addEventListener('click', (e) => {
+      if (e.target === this._elements.valuePickerOverlay) this._hideValuePicker();
+    });
+    document.getElementById('btn-cancel-picker').addEventListener('click', () => this._hideValuePicker());
   }
 
   /** ==================== 渲染主入口 ==================== */
@@ -730,6 +741,13 @@ class GameUI {
       return;
     }
 
+    // 换面消耗品：先弹出选值器，用户确认后才消耗
+    if (selectedConsumable.effectType === 'set_dice_value') {
+      const dieIndex = this._selectedDieIndex ?? 0;
+      this._showValuePicker(dieIndex);
+      return;
+    }
+
     const ability = cheating.useConsumable(this._selectedConsumableIndex);
 
     if (ability) {
@@ -742,12 +760,6 @@ class GameUI {
       let affectedDieIndex = -1;
 
       switch (ability.effectType) {
-        case 'set_dice_value':
-          // 换面：使用选中的骰子，设为最大值
-          affectedDieIndex = this._selectedDieIndex ?? 0;
-          dicePool.setDie(affectedDieIndex, ability.params.max);
-          effectMessage = `换面：骰子设为 ${ability.params.max}`;
-          break;
         case 'reroll_min':
           // 加料：使用选中的骰子
           affectedDieIndex = this._selectedDieIndex ?? 0;
@@ -924,6 +936,65 @@ class GameUI {
     }, duration);
   }
 
+  /** ==================== 点数选择器（换面消耗品） ==================== */
+
+  /**
+   * 显示点数选择器。此时道具尚未消耗，玩家取消不会丢失道具。
+   * @param {number} dieIndex - 目标骰子索引
+   */
+  _showValuePicker(dieIndex) {
+    // 记住上下文，但不消耗道具
+    this._pendingFaceChange = {
+      dieIndex,
+      slotIndex: this._selectedConsumableIndex
+    };
+    const container = this._elements.valuePickerButtons;
+    container.innerHTML = '';
+    for (let v = 1; v <= 6; v++) {
+      const btn = document.createElement('button');
+      btn.className = `dice-face-picker face-${v}`;
+      btn.textContent = v;
+      btn.addEventListener('click', () => this._onValuePicked(v));
+      container.appendChild(btn);
+    }
+    this._elements.valuePickerOverlay.classList.remove('hidden');
+  }
+
+  /** 取消选择器 — 不消耗道具 */
+  _hideValuePicker() {
+    this._elements.valuePickerOverlay.classList.add('hidden');
+    this._pendingFaceChange = null;
+  }
+
+  /**
+   * 玩家确认选值后：消耗道具 → 应用效果 → 渲染
+   * @param {number} value - 玩家选择的点数(1-6)
+   */
+  _onValuePicked(value) {
+    if (!this._pendingFaceChange) return;
+    const { dieIndex, slotIndex } = this._pendingFaceChange;
+    this._elements.valuePickerOverlay.classList.add('hidden');
+    this._pendingFaceChange = null;
+
+    // 现在才消耗道具
+    const cheating = this._gameFlow.getCheating();
+    const ability = cheating.useConsumable(slotIndex);
+    if (!ability) {
+      this._showToast('使用失败');
+      return;
+    }
+
+    const dicePool = this._gameFlow.getDicePool();
+    dicePool.setDie(dieIndex, value);
+
+    this._showToast(`换面：骰子设为 ${value}`);
+    this._selectedConsumableIndex = null;
+
+    // 重新计算并渲染
+    this._gameFlow.recalculateRollResult();
+    this._render();
+  }
+
   _onGlobalKeydown(e) {
     if (e.key !== 'Escape') return;
     if (!this._elements.detailOverlay.classList.contains('hidden')) {
@@ -968,15 +1039,30 @@ class GameUI {
 
   _getItemEffectHint(item) {
     if (!item) return '-';
-    if (item.effectType === 'flat_bonus') return `效果：基础分 +${item.params?.bonus ?? 0}`;
-    if (item.effectType === 'score_multiplier') return `效果：最终分数 ×${item.params?.multiplier ?? 1}`;
-    if (item.tags?.includes('targeted_dual')) return '效果：需要选择两个骰子作为目标';
-    if (item.tags?.includes('targeted')) return '效果：需要选择一个骰子作为目标';
-    if (item.tags?.includes('universal')) return '效果：可作用于任意骰子';
-    if (item.tags?.includes('information')) return '效果：提供战斗信息或弱点信息';
-    if (item.tags?.includes('reroll')) return '效果：重掷或追加投掷机会';
-    if (item.tags?.includes('persistent')) return '效果：跨回合持续生效';
-    return `效果类型：${item.effectType || '未知'}`;
+    // 被动能力直接使用 description，已包含完整效果描述
+    if (item.type === 'passive') {
+      if (item.description) return `效果：${item.description}`;
+      return '-';
+    }
+    // 消耗品：根据 effectType 提供可读提示
+    switch (item.effectType) {
+      case 'set_dice_value': return `效果：选择一个骰子，将其改为任意点数(1-6)`;
+      case 'reroll_min': return `效果：重掷一个骰子，结果保证≥${item.params?.minValue ?? 4}`;
+      case 'reveal_weakness': return `效果：查看本场弱点分类，该分类+10分`;
+      case 'extra_roll': return `效果：重新投掷所有骰子`;
+      case 'replace_lowest': return `效果：将最低点数的骰子替换为${item.params?.value ?? 6}`;
+      case 'swap_values': return `效果：选择两个骰子，交换它们的值`;
+      case 'gamble_reroll': return `效果：50%概率全骰变6，50%概率全骰变1`;
+      case 'freeze_die': return `效果：冻结一个骰子，下轮保留其值`;
+      case 'invert_value': return `效果：骰子值变为 (7-原值)`;
+      case 'flat_bonus': return `效果：基础分 +${item.params?.bonus ?? 0}`;
+      case 'score_multiplier': return `效果：最终分数 ×${item.params?.multiplier ?? 1}`;
+      default:
+        if (item.tags?.includes('targeted_dual')) return '效果：需要选择两个骰子作为目标';
+        if (item.tags?.includes('targeted')) return '效果：需要选择一个骰子作为目标';
+        if (item.description) return `效果：${item.description}`;
+        return '-';
+    }
   }
 
   _getCategoryDisplayName(categoryId) {
