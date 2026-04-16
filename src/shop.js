@@ -142,10 +142,23 @@ class Shop {
    * @param {number} slotIndex
    * @returns {boolean} success
    */
+  /**
+   * Buy an item from the shop.
+   * @param {number} slotIndex - index in display
+   * @returns {boolean|string} true on success, false on failure, 'passive_slots_full' if passive limit reached
+   */
   buy(slotIndex) {
     const item = this._getItem(slotIndex);
     if (!item) return false;
     if (!this._economy.canAfford(item.cost)) return false;
+
+    // Check passive slot limit before purchasing
+    if (item.type === 'passive') {
+      const maxSlots = this._dataConfig.getGlobal().passives?.maxSlots ?? 3;
+      if (this._cheating.getPassiveCount() >= maxSlots) {
+        return 'passive_slots_full';
+      }
+    }
 
     // Deduct cost
     this._economy.spend(item.cost);
