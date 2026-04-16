@@ -40,6 +40,15 @@ class CheatingAbilities {
 
     /** @type {string|null} Weakness category revealed by insight consumable */
     this._weaknessCategory = null;
+
+    /** @type {number} Temporary round multiplier (from consumables like 魔鬼契约) */
+    this._roundMultiplier = 1.0;
+
+    /** @type {number} Temporary round flat bonus (from consumables like 孤注一掷) */
+    this._roundFlatBonus = 0;
+
+    /** @type {number} Target score increase ratio for next round (from 魔鬼契约) */
+    this._nextRoundTargetIncrease = 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -165,6 +174,53 @@ class CheatingAbilities {
   resetRoundState() {
     this._usedThisRound = 0;
     this._weaknessCategory = null;
+    this._roundMultiplier = 1.0;
+    this._roundFlatBonus = 0;
+  }
+
+  /**
+   * Get and consume next round target increase (from 魔鬼契约).
+   * Returns the increase ratio and resets it to 0.
+   * @returns {number} increase ratio (e.g. 0.25 for +25%)
+   */
+  consumeNextRoundTargetIncrease() {
+    const increase = this._nextRoundTargetIncrease;
+    this._nextRoundTargetIncrease = 0;
+    return increase;
+  }
+
+  /**
+   * Add temporary round multiplier (from consumable).
+   * @param {number} multiplier
+   */
+  addRoundMultiplier(multiplier) {
+    this._roundMultiplier *= multiplier;
+  }
+
+  /**
+   * Add next round target increase (from consumable).
+   * @param {number} increase - ratio (e.g. 0.25 for +25%)
+   */
+  addNextRoundTargetIncrease(increase) {
+    this._nextRoundTargetIncrease += increase;
+  }
+
+  /**
+   * Sacrifice all remaining consumables, returning the count destroyed.
+   * @returns {number} number of consumables destroyed
+   */
+  sacrificeAllConsumables() {
+    const count = this._consumableSlots.length;
+    this._consumableSlots = [];
+    return count;
+  }
+
+  /**
+   * Add temporary round flat bonus (from consumable).
+   * @param {number} bonus
+   */
+  addRoundFlatBonus(bonus) {
+    this._roundFlatBonus += bonus;
   }
 
   // ---------------------------------------------------------------------------
@@ -262,6 +318,36 @@ class CheatingAbilities {
       if (passive.effectType === 'flat_bonus') {
         total += passive.params.bonus || 0;
       }
+
+      // 双重视界 (double_vision) - pair value bonus
+      if (passive.effectType === 'pair_value_bonus') {
+        if (matchedCategory.id === 'pair' || matchedCategory.matchType === 'same_value') {
+          const values = dicePool.getValues();
+          const freq = {};
+          for (const v of values) freq[v] = (freq[v] || 0) + 1;
+          const mult = passive.params.perPairMultiplier || 3;
+          for (const [val, count] of Object.entries(freq)) {
+            if (count >= 2) {
+              total += Number(val) * mult;
+            }
+          }
+        }
+      }
+
+      // 七彩奖励 (rainbow) - scatter diversity bonus
+      if (passive.effectType === 'scatter_diversity_bonus') {
+        if (matchedCategory.id === 'bust' || matchedCategory.matchType === 'fallback') {
+          const values = dicePool.getValues();
+          const uniqueCount = new Set(values).size;
+          total += uniqueCount * (passive.params.perUnique || 6);
+        }
+      }
+
+      // 众骰之力 (dice_army) - per-die flat bonus
+      if (passive.effectType === 'dice_count_bonus') {
+        const diceCount = dicePool.getValues().length;
+        total += diceCount * (passive.params.perDie || 4);
+      }
     }
 
     // 透视 (insight) - weakness category bonus
@@ -269,15 +355,20 @@ class CheatingAbilities {
       total += 10; // fixed bonus from insight
     }
 
+    // Temporary round flat bonus (from consumables like 孤注一掷)
+    total += this._roundFlatBonus;
+
     return total;
   }
 
   /**
    * Calculate total multiplier from all passives.
    * Multipliers are multiplied together (product, not sum).
+   * @param {object} [matchedCategory] - matched category (for conditional multipliers)
+   * @param {object} [dicePool] - dice pool (for conditional multipliers)
    * @returns {number} total multiplier (1.0 if none)
    */
-  getMultipliers() {
+  getMultipliers(matchedCategory = null, dicePool = null) {
     let product = 1.0;
 
     for (const passive of this._passives) {
@@ -286,7 +377,37 @@ class CheatingAbilities {
       if (passive.effectType === 'score_multiplier') {
         product *= passive.params.multiplier || 1.0;
       }
+
+      // 完美主义者 (perfectionist) - all dice >= minValue
+      if (passive.effectType === 'high_dice_multiplier' && dicePool) {
+        const minVal = passive.params.minValue || 4;
+        const values = dicePool.getValues();
+        if (values.length > 0 && values.every(v => v >= minVal)) {
+          product *= passive.params.multiplier || 1.5;
+        }
+      }
+
+      // 顺势而为 (straight_momentum) - straight categories
+      if (passive.effectType === 'straight_multiplier' && matchedCategory) {
+        const cats = passive.params.categories || [];
+        if (cats.includes(matchedCategory.id)) {
+          product *= passive.params.multiplier || 1.6;
+        }
+      }
+
+      // 逢六大吉 (lucky_six) - per-six multiplier
+      if (passive.effectType === 'six_count_multiplier' && dicePool) {
+        const values = dicePool.getValues();
+        const sixCount = values.filter(v => v === 6).length;
+        if (sixCount > 0) {
+          const perSix = passive.params.perSixMultiplier || 1.15;
+          product *= Math.pow(perSix, sixCount);
+        }
+      }
     }
+
+    // Temporary round multiplier (from consumables like 魔鬼契约)
+    product *= this._roundMultiplier;
 
     return product;
   }
@@ -317,6 +438,9 @@ class CheatingAbilities {
     this._usedThisRound = 0;
     this._sealedPassiveId = null;
     this._weaknessCategory = null;
+    this._roundMultiplier = 1.0;
+    this._roundFlatBonus = 0;
+    this._nextRoundTargetIncrease = 0;
   }
 }
 

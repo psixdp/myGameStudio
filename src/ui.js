@@ -822,6 +822,21 @@ class GameUI {
         case 'reveal_weakness':
           effectMessage = `透视：已显示弱点分类`;
           break;
+        case 'temp_multiplier_penalty':
+          // 魔鬼契约：本轮×1.5，下轮目标+25%
+          cheating.addRoundMultiplier(ability.params.multiplier || 1.5);
+          cheating.addNextRoundTargetIncrease(ability.params.nextRoundTargetIncrease || 0.25);
+          effectMessage = `魔鬼契约：本轮×${ability.params.multiplier}，下轮目标+${(ability.params.nextRoundTargetIncrease * 100)}%`;
+          break;
+        case 'sacrifice_consumables':
+          // 孤注一掷：销毁全部消耗品，每个+8
+          {
+            const sacrificed = cheating.sacrificeAllConsumables();
+            const bonusPerSac = ability.params.bonusPerSacrifice || 8;
+            cheating.addRoundFlatBonus(sacrificed * bonusPerSac);
+            effectMessage = `孤注一掷：销毁${sacrificed}个消耗品，+${sacrificed * bonusPerSac}分`;
+          }
+          break;
       }
 
       this._showToast(effectMessage);
@@ -1055,6 +1070,8 @@ class GameUI {
       case 'gamble_reroll': return `效果：50%概率全骰变6，50%概率全骰变1`;
       case 'freeze_die': return `效果：冻结一个骰子，下轮保留其值`;
       case 'invert_value': return `效果：骰子值变为 (7-原值)`;
+      case 'temp_multiplier_penalty': return `效果：本轮分数×${item.params?.multiplier ?? 1.5}，但下轮目标+${((item.params?.nextRoundTargetIncrease ?? 0.25) * 100)}%`;
+      case 'sacrifice_consumables': return `效果：销毁全部消耗品，每个+${item.params?.bonusPerSacrifice ?? 8}分`;
       case 'flat_bonus': return `效果：基础分 +${item.params?.bonus ?? 0}`;
       case 'score_multiplier': return `效果：最终分数 ×${item.params?.multiplier ?? 1}`;
       default:
