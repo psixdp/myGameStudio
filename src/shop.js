@@ -147,20 +147,36 @@ class Shop {
     if (!item) return false;
     if (!this._economy.canAfford(item.cost)) return false;
 
-    // Deduct cost
-    this._economy.spend(item.cost);
+    // Guard against stale dice expansion entries:
+    // after one expansion purchase in the same shop, later expansion slots can
+    // become invalid if the pool has reached max.
+    if (item.type === 'dice_expansion') {
+      const maxCount = this._dataConfig.getGlobal().dice?.maxCount ?? 7;
+      if (this._dicePool.getPermanentCount() >= maxCount) return false;
+    }
+
+    // Deduct cost first; if subsequent grant fails, refund.
+    if (!this._economy.spend(item.cost)) return false;
 
     // Add to inventory based on type
+    let granted = false;
     if (item.type === 'consumable') {
-      this._cheating.addConsumable(item.id);
+      granted = this._cheating.addConsumable(item.id);
     } else if (item.type === 'passive') {
-      this._cheating.addPassive(item.id, item.cost);
+      granted = this._cheating.addPassive(item.id, item.cost);
     } else if (item.type === 'dice_expansion') {
       const initialValue = item.params.initialValue;
       const initVal = (initialValue === 'random' || initialValue == null)
         ? undefined
         : Number(initialValue);
-      this._dicePool.addPermanentDie(initVal);
+      granted = this._dicePool.addPermanentDie(initVal);
+    } else {
+      granted = false;
+    }
+
+    if (!granted) {
+      this._economy.earn(item.cost);
+      return false;
     }
 
     // Remove from display (mark slot as sold)

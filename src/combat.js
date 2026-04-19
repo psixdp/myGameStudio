@@ -497,7 +497,7 @@ class Combat {
       case 'consecutive':
         // Check if loose_consecutive passive is active
         const hasLoose = this._cheating.getPassiveByEffect('loose_consecutive') !== null;
-        return this._checkConsecutive(values, cat.matchCount || 4, hasLoose);
+        return this._checkConsecutive(values, cat.consecutiveCount || 4, hasLoose);
       case 'fallback':
         return true;
       default:
@@ -530,16 +530,22 @@ class Combat {
       return false;
     }
 
-    // With gaps allowed, check if we can form a sequence with allowable gaps
-    // A sequence of length N with maxGap allows max span of N + (N-1)*maxGap
+    // With gaps allowed, every adjacent step in the chosen run must stay
+    // within (1 + maxGap). This avoids false positives like 1,2,6,7.
     if (unique.length < length) return false;
 
-    // Try sliding window: for each starting position
+    // Try each start and extend a contiguous run in the sorted unique list.
     for (let i = 0; i <= unique.length - length; i++) {
-      const start = unique[i];
-      const end = unique[i + length - 1];
-      const maxAllowedSpan = (length - 1) + (length - 1) * maxGap;
-      if (end - start <= maxAllowedSpan) return true;
+      let run = 1;
+      for (let j = i + 1; j < unique.length && run < length; j++) {
+        const step = unique[j] - unique[j - 1];
+        if (step <= maxGap + 1) {
+          run++;
+        } else {
+          break;
+        }
+      }
+      if (run >= length) return true;
     }
     return false;
   }
