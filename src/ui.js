@@ -728,10 +728,12 @@ class GameUI {
     const cheating = this._gameFlow.getCheating();
     const consumables = cheating.getConsumables();
     const selectedConsumable = consumables[this._selectedConsumableIndex];
+    if (!selectedConsumable) return;
 
     // 检查是否需要选择目标
-    const isTargeted = selectedConsumable.tags && selectedConsumable.tags.includes('targeted');
-    const isDualTarget = selectedConsumable.tags && selectedConsumable.tags.includes('targeted_dual');
+    const tags = selectedConsumable.tags || [];
+    const isTargeted = tags.includes('targeted') || tags.includes('universal');
+    const isDualTarget = tags.includes('targeted_dual');
 
     if (isDualTarget && (this._selectedDieIndex === null || this._selectedDieIndex2 === null)) {
       this._showToast('请先选择两个骰子');
@@ -743,18 +745,22 @@ class GameUI {
 
     // 换面消耗品：先弹出选值器，用户确认后才消耗
     if (selectedConsumable.effectType === 'set_dice_value') {
-      const dieIndex = this._selectedDieIndex ?? 0;
-      this._showValuePicker(dieIndex);
+      this._showValuePicker(this._selectedDieIndex);
       return;
     }
 
-    const ability = cheating.useConsumable(this._selectedConsumableIndex);
+    const combat = this._gameFlow.getCombat();
+    const dicePool = this._gameFlow.getDicePool();
+    const beforeValues = dicePool.getValues();
+    const ability = combat.useConsumable(this._selectedConsumableIndex, {
+      targetIndex: this._selectedDieIndex ?? 0,
+      targetIndex2: this._selectedDieIndex2 ?? 1
+    });
 
     if (ability) {
       // 应用消耗品效果
-      const dicePool = this._gameFlow.getDicePool();
-      const dice = dicePool.getDice();
       const diceElements = this._elements.diceContainer.querySelectorAll('.die');
+      const afterValues = dicePool.getValues();
 
       let effectMessage = `使用了 ${ability.name}`;
       let affectedDieIndex = -1;
@@ -763,34 +769,29 @@ class GameUI {
         case 'reroll_min':
           // 加料：使用选中的骰子
           affectedDieIndex = this._selectedDieIndex ?? 0;
-          dicePool.rerollDie(affectedDieIndex, ability.params.minValue);
           effectMessage = `加料：重掷骰子（最小${ability.params.minValue}）`;
           break;
         case 'replace_lowest':
           // 偷梁换柱：自动替换最低骰子（不需要选择）
-          dicePool.replaceLowest(ability.params.value);
           effectMessage = `偷梁换柱：最低骰子变为 ${ability.params.value}`;
           // 找到最低骰子的索引
-          let minVal = Infinity, minIdx = 0;
-          dice.forEach((d, i) => {
-            if (d.value < minVal) { minVal = d.value; minIdx = i; }
-          });
-          affectedDieIndex = minIdx;
+          let minVal = Infinity;
+          for (let i = 0; i < beforeValues.length; i++) {
+            if (beforeValues[i] < minVal) {
+              minVal = beforeValues[i];
+              affectedDieIndex = i;
+            }
+          }
           break;
         case 'swap_values':
           // 换位：交换两个骰子的值
-          dicePool.swapDice(this._selectedDieIndex, this._selectedDieIndex2);
           effectMessage = `换位：交换了两个骰子`;
           affectedDieIndex = this._selectedDieIndex;
           break;
         case 'gamble_reroll':
           // 赌博：50%概率全6，50%概率全1
-          const rng = this._gameFlow.getRNG().getStream('dice');
-          const isLucky = rng.nextFloat() < ability.params.chance;
-          const newValue = isLucky ? ability.params.goodValue : ability.params.badValue;
-          for (let i = 0; i < dice.length; i++) {
-            dicePool.setDie(i, newValue);
-          }
+          const allSame = afterValues.length > 0 && afterValues.every(v => v === afterValues[0]);
+          const isLucky = allSame && afterValues[0] === ability.params.goodValue;
           effectMessage = isLucky ? `赌博：大成功！全骰变为6` : `赌博：失败...全骰变为1`;
           // 对所有骰子添加微调动画
           diceElements.forEach(d => d.classList.add('nudge'));
@@ -800,19 +801,14 @@ class GameUI {
         case 'freeze_die':
           // 冻结：骰子下轮保留值
           affectedDieIndex = this._selectedDieIndex;
-          dicePool.freezeDie(affectedDieIndex);
           effectMessage = `冻结：骰子下轮保留`;
           break;
         case 'invert_value':
           // 反转：骰子值变为 (7-原值)
           affectedDieIndex = this._selectedDieIndex;
-          dicePool.invertDie(affectedDieIndex, ability.params.sumValue);
           effectMessage = `反转：骰子值已反转`;
           break;
         case 'extra_roll':
-          dicePool.roll();
-          const clonePassive = cheating.getPassiveByEffect('clone_dice');
-          if (clonePassive) dicePool.addTempDie();
           effectMessage = `双投：重新投掷全部骰子`;
           // 对所有骰子添加微调动画
           diceElements.forEach(d => d.classList.add('nudge'));
@@ -824,16 +820,13 @@ class GameUI {
           break;
         case 'temp_multiplier_penalty':
           // 魔鬼契约：本轮×1.5，下轮目标+25%
-          cheating.addRoundMultiplier(ability.params.multiplier || 1.5);
-          cheating.addNextRoundTargetIncrease(ability.params.nextRoundTargetIncrease || 0.25);
           effectMessage = `魔鬼契约：本轮×${ability.params.multiplier}，下轮目标+${(ability.params.nextRoundTargetIncrease * 100)}%`;
           break;
         case 'sacrifice_consumables':
           // 孤注一掷：销毁全部消耗品，每个+8
           {
-            const sacrificed = cheating.sacrificeAllConsumables();
+            const sacrificed = Math.max(0, consumables.length - 1);
             const bonusPerSac = ability.params.bonusPerSacrifice || 8;
-            cheating.addRoundFlatBonus(sacrificed * bonusPerSac);
             effectMessage = `孤注一掷：销毁${sacrificed}个消耗品，+${sacrificed * bonusPerSac}分`;
           }
           break;
@@ -855,6 +848,7 @@ class GameUI {
       // 重置选择状态
       this._selectedConsumableIndex = null;
       this._selectedDieIndex = null;
+      this._selectedDieIndex2 = null;
       this._isSelectingTarget = false;
       this._render();
     }
@@ -992,21 +986,24 @@ class GameUI {
     this._pendingFaceChange = null;
 
     // 现在才消耗道具
-    const cheating = this._gameFlow.getCheating();
-    const ability = cheating.useConsumable(slotIndex);
+    const combat = this._gameFlow.getCombat();
+    const ability = combat.useConsumable(slotIndex, {
+      targetIndex: dieIndex,
+      targetValue: value
+    });
     if (!ability) {
       this._showToast('使用失败');
       return;
     }
 
-    const dicePool = this._gameFlow.getDicePool();
-    dicePool.setDie(dieIndex, value);
-
     this._showToast(`换面：骰子设为 ${value}`);
     this._selectedConsumableIndex = null;
+    this._selectedDieIndex = null;
+    this._selectedDieIndex2 = null;
+    this._isSelectingTarget = false;
 
     // 重新计算并渲染
-    this._gameFlow.recalculateRollResult();
+    this._pendingRollResult = this._gameFlow.recalculateRollResult();
     this._render();
   }
 
