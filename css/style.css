@@ -17,18 +17,33 @@ body {
 
 /* ==================== 应用容器 ==================== */
 #app {
-  max-width: 600px;
+  width: min(100%, 900px);
   margin: 0 auto;
   padding: 20px;
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 120px minmax(380px, 540px) 120px;
+  grid-template-areas:
+    "header header header"
+    "consumables main passives";
+  gap: 20px;
+  justify-content: center;
+  align-items: stretch;
+  align-content: start;
+}
+
+.game-main {
+  grid-area: main;
+  min-width: 0;
 }
 
 /* ==================== 头部 ==================== */
 .game-header {
+  grid-area: header;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   padding-bottom: 15px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
@@ -118,14 +133,74 @@ body {
   position: relative;
 }
 
+/* 牌桌区域 */
+.table-surface {
+  position: relative;
+  height: 132px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px 16px 12px;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(46, 204, 113, 0.14), transparent 54%),
+    linear-gradient(180deg, rgba(18, 76, 64, 0.72), rgba(8, 31, 43, 0.92));
+  border: 1px solid rgba(46, 204, 113, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -18px 34px rgba(0, 0, 0, 0.18),
+    0 10px 24px rgba(0, 0, 0, 0.12);
+}
+
+.table-surface::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.table-label {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(210, 255, 226, 0.78);
+  letter-spacing: 0;
+}
+
 /* 骰子容器 */
 .dice-container {
   display: flex;
   gap: 12px;
   justify-content: center;
   align-items: center;
-  min-height: 100px;
-  padding: 20px 0;
+  height: 72px;
+  min-height: 0;
+  padding: 0 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.table-category {
+  position: relative;
+  z-index: 1;
+  min-height: 16px;
+  color: #9fb0c7;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 /* 单个骰子 */
@@ -176,9 +251,9 @@ body {
 /* ==================== 碗盖效果 ==================== */
 .dice-bowl {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 2;
+  top: 10px;
+  right: 12px;
+  z-index: 3;
   pointer-events: none;
 }
 
@@ -188,16 +263,7 @@ body {
 
 /* 盖碗状态提示（轻量，不遮挡交互） */
 .bowl-status-text {
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  color: #ffdca8;
-  background: rgba(74, 44, 23, 0.92);
-  border: 1px solid rgba(255, 194, 120, 0.45);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+  display: none;
 }
 
 .dice-bowl.covered .bowl-status-text {
@@ -318,11 +384,11 @@ body {
 /* 分数显示 */
 .score-display {
   display: grid;
-  grid-template-columns: 140px 1fr 190px;
+  grid-template-columns: 118px 1fr 150px;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 18px;
-  padding: 15px;
+  padding: 12px;
   background: rgba(0,0,0,0.2);
   border-radius: 8px;
 }
@@ -338,7 +404,7 @@ body {
   align-items: center;
   gap: 6px;
   text-align: center;
-  min-height: 78px;
+  min-height: 62px;
   justify-content: center;
 }
 
@@ -353,9 +419,9 @@ body {
 }
 
 .score-display .category {
-  color: #f39c12;
-  font-size: 14px;
-  min-height: 24px;
+  color: #9fb0c7;
+  font-size: 12px;
+  min-height: 0;
   display: inline-flex;
   align-items: center;
 }
@@ -365,24 +431,42 @@ body {
   background: rgba(15, 52, 96, 0.5);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 12px;
-  padding: 15px 20px;
-  margin-bottom: 20px;
+  padding: 12px 10px;
+  position: sticky;
+  top: 20px;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.inventory-panel-consumables {
+  grid-area: consumables;
+}
+
+.inventory-panel-passives {
+  grid-area: passives;
 }
 
 .inventory-panel h3 {
-  font-size: 14px;
+  font-size: 13px;
   color: #aaa;
   margin-bottom: 10px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0;
+  line-height: 1.25;
 }
 
 .consumables-list,
 .passives-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-height: 36px;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  flex: 1;
 }
 
 .consumables-list:empty::after,
@@ -394,26 +478,38 @@ body {
 
 /* 物品卡片 */
 .item-card {
-  background: rgba(15, 52, 96, 0.8);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 13px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 2px;
+  font-size: 12px;
+  line-height: 1.25;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 78px;
+  position: relative;
+  text-align: center;
 }
 
 .item-card:hover {
-  background: rgba(26, 75, 140, 0.8);
-  border-color: rgba(255,255,255,0.3);
+  background: transparent;
+  transform: translateY(-1px);
 }
 
 .item-card.selected {
-  background: rgba(233, 69, 96, 0.5);
-  border-color: #e94560;
+  background: transparent;
+}
+
+.item-card.selected .item-icon-svg {
+  filter:
+    drop-shadow(0 0 8px rgba(0, 149, 255, 0.7))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.28));
 }
 
 .item-card.disabled {
@@ -421,9 +517,47 @@ body {
   cursor: not-allowed;
 }
 
-.item-card .cost {
-  color: #f39c12;
-  font-weight: bold;
+.item-icon-wrap {
+  width: 58px;
+  height: 58px;
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.item-icon-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.28));
+}
+
+.item-name {
+  min-height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e8f1ff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.item-count {
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  color: #ffd166;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    -1px 0 #101827,
+    1px 0 #101827,
+    0 -1px #101827,
+    0 1px #101827,
+    2px 2px 0 rgba(0, 0, 0, 0.5);
 }
 
 /* 消耗品预览 */
@@ -742,6 +876,15 @@ button:disabled {
   overflow-y: auto;
 }
 
+#shop-overlay {
+  align-items: flex-start;
+  padding-top: clamp(82px, 7vh, 96px);
+}
+
+.shop-content {
+  max-width: 540px;
+}
+
 .shop-content h2,
 .gameover-content h2 {
   font-size: 24px;
@@ -911,6 +1054,37 @@ button:disabled {
 }
 
 /* ==================== 响应式 ==================== */
+@media (max-width: 900px) {
+  #app {
+    width: min(100%, 640px);
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "main"
+      "consumables"
+      "passives";
+  }
+
+  .inventory-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .consumables-list,
+  .passives-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .item-card {
+    width: 100px;
+  }
+}
+
 @media (max-width: 480px) {
   #app {
     padding: 15px;
@@ -1001,9 +1175,10 @@ button:disabled {
 /* 结果状态提示 */
 .result-status {
   font-size: 14px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 6px;
+  font-weight: 800;
+  padding: 5px 14px;
+  border-radius: 999px;
+  min-width: 76px;
   min-height: 28px;
   display: inline-flex;
   align-items: center;
@@ -1023,6 +1198,11 @@ button:disabled {
 .result-status.warning {
   color: #fbbf24;
   background: rgba(251, 191, 36, 0.15);
+}
+
+.result-status.rolling {
+  color: #7dd3fc;
+  background: rgba(125, 211, 252, 0.16);
 }
 
 .result-status.failure {
@@ -1078,11 +1258,11 @@ button:disabled {
 
 /* 分类名称样式优化 */
 .score-display .category {
-  color: #f39c12;
-  font-size: 14px;
-  padding: 2px 8px;
-  background: rgba(243, 156, 18, 0.1);
-  border-radius: 4px;
+  color: #9fb0c7;
+  font-size: 12px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
 }
 
 /* ==================== 记分规则弹窗（简化版） ==================== */

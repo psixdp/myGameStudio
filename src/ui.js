@@ -2,6 +2,159 @@
 
 import { GameFlow, GameState } from './game-flow.js';
 
+const ITEM_ICON_DEFINITIONS = Object.freeze({
+  face_change: { symbol: 'dieArrow', primary: '#4cc9f0', secondary: '#ffe66d' },
+  loaded_shot: { symbol: 'pipPlus', primary: '#f72585', secondary: '#ffd166' },
+  insight: { symbol: 'eye', primary: '#00f5d4', secondary: '#90dbf4' },
+  double_roll: { symbol: 'diceTwo', primary: '#b8f2e6', secondary: '#5e60ce' },
+  swap_lowest: { symbol: 'pillar', primary: '#f77f00', secondary: '#fcbf49' },
+  swap_dice: { symbol: 'swap', primary: '#48cae4', secondary: '#ade8f4' },
+  gamble: { symbol: 'coin', primary: '#ffb703', secondary: '#fb8500' },
+  freeze_die: { symbol: 'snow', primary: '#90e0ef', secondary: '#caf0f8' },
+  invert_dice: { symbol: 'invert', primary: '#c77dff', secondary: '#e0aaff' },
+  devils_bargain: { symbol: 'horn', primary: '#ef476f', secondary: '#ffd166' },
+  all_in: { symbol: 'burst', primary: '#ff006e', secondary: '#ffbe0b' },
+
+  loaded_dice: { symbol: 'weight', primary: '#8d99ae', secondary: '#e9ecef' },
+  clone_dice: { symbol: 'clone', primary: '#72efdd', secondary: '#56cfe1' },
+  chain_link: { symbol: 'chain', primary: '#f4a261', secondary: '#e76f51' },
+  straight_eye: { symbol: 'straight', primary: '#52b788', secondary: '#b7e4c7' },
+  greed: { symbol: 'gem', primary: '#ffd166', secondary: '#f77f00' },
+  pattern_master: { symbol: 'crown', primary: '#9b5de5', secondary: '#f15bb5' },
+  decree_override: { symbol: 'fist', primary: '#ffbe0b', secondary: '#fb5607' },
+  heaven_dice: { symbol: 'meteor', primary: '#80ed99', secondary: '#38b000' },
+  judgment_flip: { symbol: 'scales', primary: '#cdb4db', secondary: '#ffc8dd' },
+  perfectionist: { symbol: 'star', primary: '#f8f9fa', secondary: '#ffd60a' },
+  straight_momentum: { symbol: 'arrow', primary: '#00bbf9', secondary: '#00f5d4' },
+  double_vision: { symbol: 'eyes', primary: '#bde0fe', secondary: '#a2d2ff' },
+  rainbow: { symbol: 'rainbow', primary: '#ff006e', secondary: '#8338ec' },
+  lucky_six: { symbol: 'six', primary: '#fb5607', secondary: '#ffbe0b' },
+  dice_army: { symbol: 'army', primary: '#06d6a0', secondary: '#118ab2' },
+});
+
+const FALLBACK_ITEM_ICON = Object.freeze({
+  consumable: { symbol: 'spark', primary: '#4cc9f0', secondary: '#ffd166' },
+  passive: { symbol: 'gem', primary: '#94a3b8', secondary: '#e2e8f0' },
+});
+
+function getItemIconDefinition(item, type) {
+  return ITEM_ICON_DEFINITIONS[item.id] || FALLBACK_ITEM_ICON[type] || FALLBACK_ITEM_ICON.consumable;
+}
+
+function buildInventoryIconSvg(item, type) {
+  const icon = getItemIconDefinition(item, type);
+  const frame = type === 'passive'
+    ? `<polygon points="40,6 70,23 70,57 40,74 10,57 10,23" fill="#0d2140" stroke="${icon.primary}" stroke-width="3"/>`
+    : `<rect x="6" y="6" width="68" height="68" rx="16" fill="#0d2140" stroke="${icon.primary}" stroke-width="3"/>`;
+
+  return `
+    <svg class="item-icon-svg" viewBox="0 0 80 80" aria-hidden="true" focusable="false">
+      ${frame}
+      ${buildItemIconSymbol(icon.symbol, icon.primary, icon.secondary)}
+    </svg>
+  `;
+}
+
+function buildItemIconSymbol(symbol, primary, secondary) {
+  switch (symbol) {
+    case 'dieArrow':
+      return `${svgDie(18, 20, 28)}
+        <path d="M52 28H64V21L76 36 64 51V44H52Z" fill="${secondary}"/>`;
+    case 'pipPlus':
+      return `${svgDie(17, 20, 32)}
+        <path d="M60 31V52M49 41.5H71" stroke="${secondary}" stroke-width="6" stroke-linecap="round"/>`;
+    case 'eye':
+      return `<path d="M13 40Q40 17 67 40Q40 63 13 40Z" fill="none" stroke="${primary}" stroke-width="4"/>
+        <circle cx="40" cy="40" r="12" fill="${secondary}"/>
+        <circle cx="40" cy="40" r="5" fill="#0b1028"/>`;
+    case 'diceTwo':
+      return `${svgDie(14, 26, 27)}${svgDie(40, 16, 27)}`;
+    case 'pillar':
+      return `<rect x="22" y="20" width="15" height="38" rx="3" fill="${primary}"/>
+        <rect x="45" y="20" width="15" height="38" rx="3" fill="${secondary}"/>
+        <path d="M19 19H63M19 60H63" stroke="#f8fafc" stroke-width="4" stroke-linecap="round"/>`;
+    case 'swap':
+      return `<path d="M18 30H58L49 21M62 52H22L31 61" fill="none" stroke="${primary}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="64" cy="30" r="7" fill="${secondary}"/>
+        <circle cx="18" cy="52" r="7" fill="${secondary}"/>`;
+    case 'coin':
+      return `<circle cx="40" cy="40" r="24" fill="${primary}" stroke="${secondary}" stroke-width="5"/>
+        <text x="40" y="52" fill="#172033" font-size="34" font-weight="900" text-anchor="middle">$</text>`;
+    case 'snow':
+      return `<path d="M40 16V64M19 28L61 52M19 52L61 28" stroke="${primary}" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="40" cy="40" r="8" fill="${secondary}"/>`;
+    case 'invert':
+      return `<path d="M23 61L11 49 23 37M57 19L69 31 57 43M19 47A24 24 0 0 1 59 24M61 33A24 24 0 0 1 21 56" fill="none" stroke="${primary}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="40" cy="40" r="8" fill="${secondary}"/>`;
+    case 'horn':
+      return `<path d="M23 58C18 39 28 22 51 14C48 27 56 36 67 40C56 46 52 55 55 66C46 59 35 57 23 58Z" fill="${primary}"/>
+        <circle cx="47" cy="45" r="10" fill="${secondary}"/>`;
+    case 'burst':
+      return `<path d="M40 9L47 30L68 20L58 41L70 49L56 55L61 73L44 63L34 73L31 56L10 61L23 45L10 32L29 31Z" fill="${primary}" stroke="${secondary}" stroke-width="3"/>`;
+    case 'weight':
+      return `<path d="M23 62L31 31H49L57 62Z" fill="${primary}"/>
+        <path d="M30 31A10 10 0 0 1 50 31" fill="none" stroke="${secondary}" stroke-width="5" stroke-linecap="round"/>`;
+    case 'clone':
+      return `${svgDie(18, 31, 27)}
+        <rect x="39" y="16" width="26" height="26" rx="6" fill="none" stroke="${secondary}" stroke-width="4"/>`;
+    case 'chain':
+      return `<path d="M22 40A13 13 0 0 1 35 27H47M58 40A13 13 0 0 1 45 53H33" fill="none" stroke="${primary}" stroke-width="7" stroke-linecap="round"/>
+        <path d="M32 40H58" stroke="${secondary}" stroke-width="5" stroke-linecap="round"/>`;
+    case 'straight':
+      return `<path d="M18 58L30 43L42 48L54 30L67 22" fill="none" stroke="${primary}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="67" cy="22" r="7" fill="${secondary}"/>`;
+    case 'gem':
+      return `<path d="M40 12L65 31L40 70L15 31Z" fill="${primary}" stroke="${secondary}" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M15 31H65M40 12V70" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>`;
+    case 'crown':
+      return `<path d="M18 57H66L60 28L48 41L39 19L30 41L18 28Z" fill="${primary}" stroke="${secondary}" stroke-width="4" stroke-linejoin="round"/>`;
+    case 'fist':
+      return `<path d="M21 34H58A9 9 0 0 1 67 43V54A14 14 0 0 1 53 68H31A14 14 0 0 1 17 54V38A8 8 0 0 1 25 30Z" fill="${primary}"/>
+        <path d="M30 29V53M42 25V53M54 29V53" stroke="#172033" stroke-width="4"/>`;
+    case 'meteor':
+      return `<path d="M20 17C39 22 55 35 64 55C49 43 35 42 20 45C29 38 30 28 20 17Z" fill="${primary}"/>
+        <circle cx="59" cy="59" r="13" fill="${secondary}"/>`;
+    case 'scales':
+      return `<path d="M40 16V63M25 30H72M25 30L13 52H37ZM72 30L60 52H84Z" fill="none" stroke="${primary}" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M25 52H37M60 52H84M25 67H55" stroke="${secondary}" stroke-width="5" stroke-linecap="round"/>`;
+    case 'star':
+      return `<path d="M40 10L49 33H73L54 47L61 71L40 57L19 71L26 47L7 33H31Z" fill="${primary}" stroke="${secondary}" stroke-width="3" stroke-linejoin="round"/>`;
+    case 'arrow':
+      return `<path d="M18 59C34 56 50 42 62 24M56 22H73V39" fill="none" stroke="${primary}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="21" cy="59" r="5" fill="${secondary}"/>`;
+    case 'eyes':
+      return `<path d="M13 33Q29 17 45 33Q29 49 13 33ZM45 47Q61 31 77 47Q61 63 45 47Z" fill="none" stroke="${primary}" stroke-width="4"/>
+        <circle cx="29" cy="33" r="5" fill="${secondary}"/>
+        <circle cx="61" cy="47" r="5" fill="${secondary}"/>`;
+    case 'rainbow':
+      return `<path d="M14 60A26 26 0 0 1 66 60" fill="none" stroke="${primary}" stroke-width="8"/>
+        <path d="M24 60A16 16 0 0 1 56 60" fill="none" stroke="${secondary}" stroke-width="8"/>
+        <path d="M34 60A6 6 0 0 1 46 60" fill="none" stroke="#06d6a0" stroke-width="8"/>`;
+    case 'six':
+      return `${svgDie(20, 18, 40)}
+        <text x="40" y="53" fill="${primary}" font-size="36" font-weight="900" text-anchor="middle">6</text>`;
+    case 'army':
+      return `${svgDie(14, 35, 21)}${svgDie(35, 20, 21)}${svgDie(56, 35, 21)}`;
+    case 'spark':
+    default:
+      return `<path d="M40 12L48 33L70 40L48 47L40 68L32 47L10 40L32 33Z" fill="${primary}" stroke="${secondary}" stroke-width="3"/>`;
+  }
+}
+
+function svgDie(x, y, size) {
+  const pipRadius = Math.max(2, size * 0.07);
+  const p1 = x + size * 0.34;
+  const p2 = x + size * 0.66;
+  const q1 = y + size * 0.34;
+  const q2 = y + size * 0.66;
+
+  return `
+    <rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${size * 0.18}" fill="#f8fafc" stroke="rgba(255,255,255,0.75)" stroke-width="1.2"/>
+    <circle cx="${p1}" cy="${q1}" r="${pipRadius}" fill="#1f2937"/>
+    <circle cx="${p2}" cy="${q2}" r="${pipRadius}" fill="#1f2937"/>
+  `;
+}
+
 /**
  * GameUI — 连接 GameFlow 和 DOM 的 UI 控制器
  *
@@ -183,6 +336,22 @@ class GameUI {
     this._updateButtons();
   }
 
+  _setRollStatus(text, className = 'placeholder') {
+    this._elements.resultStatus.textContent = text;
+    this._elements.resultStatus.className = `result-status ${className}`;
+  }
+
+  _setCategoryLabel(text) {
+    if (!text) {
+      this._elements.categoryName.textContent = '';
+      this._elements.categoryName.classList.add('hidden');
+      return;
+    }
+
+    this._elements.categoryName.textContent = `牌型：${text}`;
+    this._elements.categoryName.classList.remove('hidden');
+  }
+
   /** ==================== 渲染投掷结果（分数对比阶段） ==================== */
   async _renderRollResult() {
     const result = this._pendingRollResult;
@@ -213,15 +382,8 @@ class GameUI {
     this._elements.targetScoreDisplay.textContent = result.targetScore;
 
     const gap = result.targetScore - result.score;
-    if (gap > 0) {
-      this._elements.resultStatus.innerHTML = `⚠️ 还差 ${gap} 分，可出千改写`;
-      this._elements.resultStatus.className = 'result-status warning';
-    } else {
-      this._elements.resultStatus.innerHTML = `✓ 分数已达标！`;
-      this._elements.resultStatus.className = 'result-status success';
-    }
-
-    this._elements.categoryName.textContent = this._getCategoryDisplayName(result.matchedCategory.id);
+    this._setRollStatus('可出千', gap > 0 ? 'warning' : 'success');
+    this._setCategoryLabel(this._getCategoryDisplayName(result.matchedCategory.id));
 
     // 消耗品和被动
     this._renderConsumables(cheating.getConsumables());
@@ -263,9 +425,8 @@ class GameUI {
       // 投掷完成但未确认：只显示分数对比，不显示胜负
       this._elements.currentScore.textContent = result.score;
       this._elements.targetScoreDisplay.textContent = result.targetScore;
-      this._elements.resultStatus.textContent = '可继续使用消耗品后再确认结果';
-      this._elements.resultStatus.className = 'result-status placeholder';
-      this._elements.categoryName.textContent = this._getCategoryDisplayName(result.matchedCategory);
+      this._setRollStatus('可出千', result.score >= result.targetScore ? 'success' : 'warning');
+      this._setCategoryLabel(this._getCategoryDisplayName(result.matchedCategory));
     } else if (result && this._resultConfirmed) {
       // 已确认：显示胜负结果，然后进入下一阶段
       this._elements.currentScore.textContent = result.score;
@@ -281,7 +442,7 @@ class GameUI {
         statusEl.className = 'result-status failure';
       }
 
-      this._elements.categoryName.textContent = this._getCategoryDisplayName(result.matchedCategory);
+      this._setCategoryLabel(this._getCategoryDisplayName(result.matchedCategory));
 
       // 结果已确认，进入下一阶段（商店或游戏结束）
       // 这里不重新渲染，让玩家看到结果
@@ -290,9 +451,8 @@ class GameUI {
       // 未投掷
       this._elements.currentScore.textContent = '0';
       this._elements.targetScoreDisplay.textContent = enemy.getTargetScore();
-      this._elements.resultStatus.textContent = '等待投掷';
-      this._elements.resultStatus.className = 'result-status placeholder';
-      this._elements.categoryName.textContent = '准备投掷';
+      this._setRollStatus(this._isRolling ? '投掷中' : '等待投掷', this._isRolling ? 'rolling' : 'placeholder');
+      this._setCategoryLabel('');
     }
 
     // 消耗品和被动
@@ -384,12 +544,10 @@ class GameUI {
     }
 
     consumables.forEach((item, index) => {
-      const card = document.createElement('div');
-      card.className = 'item-card';
+      const card = this._createInventoryCard(item, 'consumable');
       if (index === this._selectedConsumableIndex) {
         card.classList.add('selected');
       }
-      card.innerHTML = `<span>${item.name}</span> <span class="cost">×${item.cost || 1}</span>`;
       card.addEventListener('click', () => this._onSelectConsumable(index));
       this._elements.consumablesList.appendChild(card);
     });
@@ -410,12 +568,10 @@ class GameUI {
     }
 
     passives.forEach((p, index) => {
-      const card = document.createElement('div');
-      card.className = 'item-card';
+      const card = this._createInventoryCard(p, 'passive');
       if (index === this._selectedPassiveIndex) {
         card.classList.add('selected');
       }
-      card.innerHTML = `<span>${p.name}</span>`;
       card.addEventListener('click', () => this._onSelectPassive(index));
       this._elements.passivesList.appendChild(card);
     });
@@ -423,6 +579,30 @@ class GameUI {
     if (this._activeDetail?.type === 'passive') {
       this._renderDetailOverlay();
     }
+  }
+
+  /** 创建侧栏物品卡片 */
+  _createInventoryCard(item, type) {
+    const card = document.createElement('div');
+    card.className = `item-card item-card-${type}`;
+
+    const iconWrap = document.createElement('span');
+    iconWrap.className = 'item-icon-wrap';
+    iconWrap.innerHTML = buildInventoryIconSvg(item, type);
+
+    if (type === 'consumable') {
+      const count = document.createElement('span');
+      count.className = 'item-count';
+      count.textContent = `x${item.cost || 1}`;
+      iconWrap.appendChild(count);
+    }
+
+    const name = document.createElement('span');
+    name.className = 'item-name';
+    name.textContent = item.name;
+
+    card.append(iconWrap, name);
+    return card;
   }
 
   /** 选择被动能力 */
@@ -572,6 +752,8 @@ class GameUI {
 
     this._isRolling = true;
     this._updateButtons();
+    this._setRollStatus('投掷中', 'rolling');
+    this._setCategoryLabel('');
 
     // 获取骰子元素
     const diceElements = this._elements.diceContainer.querySelectorAll('.die');
@@ -616,7 +798,7 @@ class GameUI {
     this._elements.diceBowl.classList.add('covered');
 
     if (this._elements.bowlStatusText) {
-      this._elements.bowlStatusText.textContent = '盖碗中 · 可出千';
+      this._elements.bowlStatusText.textContent = '';
     }
 
     await new Promise(resolve => setTimeout(resolve, 180));
@@ -630,7 +812,7 @@ class GameUI {
     this._elements.diceBowl.classList.add('revealing');
 
     if (this._elements.bowlStatusText) {
-      this._elements.bowlStatusText.textContent = '揭晓中...';
+      this._elements.bowlStatusText.textContent = '';
     }
 
     await new Promise(resolve => setTimeout(resolve, 220));
@@ -1080,6 +1262,7 @@ class GameUI {
   }
 
   _getCategoryDisplayName(categoryId) {
+    const id = categoryId && typeof categoryId === 'object' ? categoryId.id : categoryId;
     const names = {
       'bust': '散牌',
       'pair': '对子',
@@ -1089,7 +1272,7 @@ class GameUI {
       'large_straight': '大顺',
       'yahtzee': '豹子',
     };
-    return names[categoryId] || categoryId;
+    return names[id] || id || '';
   }
 
   /** ==================== 记分规则弹窗 ==================== */
