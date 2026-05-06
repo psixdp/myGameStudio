@@ -8,6 +8,7 @@ import { CheatingAbilities } from './cheating.js';
 import { Enemy } from './enemy.js';
 import { Combat } from './combat.js';
 import { Shop } from './shop.js';
+import { GameLog } from './game-log.js';
 
 /**
  * Game state enumeration.
@@ -57,6 +58,7 @@ class GameFlow {
     this._enemy = null;
     this._combat = null;
     this._shop = null;
+    this._log = new GameLog();
   }
 
   // ---------------------------------------------------------------------------
@@ -162,6 +164,11 @@ class GameFlow {
     this._round = 1;
     this._gameResult = null;
 
+    // Reset and start game log
+    this._log.clear();
+    this._log.setRound(this._round);
+    this._log.logGameStart(this._seed);
+
     // Pre-load first enemy so UI can display info before first roll
     this._enemy.loadForRound(this._round);
 
@@ -206,6 +213,7 @@ class GameFlow {
     }
 
     const rollResult = this._combat.executeRollPhase(this._round);
+    this._log.setRound(this._round);
     this._state = GameState.BOWL_COVERED;
     return rollResult;
   }
@@ -222,6 +230,9 @@ class GameFlow {
 
     const result = this._combat.finalizeResult();
 
+    // Log battle result
+    this._log.logBattleResult(result.victory, result.score, result.targetScore, result.tokensEarned);
+
     // Determine next state
     if (result.victory) {
       if (this._round >= this.getTotalRounds()) {
@@ -232,6 +243,7 @@ class GameFlow {
           score: result.score,
         };
         this._state = GameState.VICTORY;
+        this._log.logGameEnd('VICTORY', this._round);
       } else {
         // Enter shop
         this._shop.open(this._round);
@@ -245,6 +257,7 @@ class GameFlow {
         score: result.score,
       };
       this._state = GameState.DEFEAT;
+      this._log.logGameEnd('DEFEAT', this._round);
     }
 
     return result;
@@ -314,6 +327,7 @@ class GameFlow {
 
     this._shop.close();
     this._round++;
+    this._log.setRound(this._round);
 
     // Clear previous round's combat result so UI doesn't show stale data
     this._combat.reset();
@@ -383,6 +397,9 @@ class GameFlow {
   /** Get DicePool instance. */
   getDicePool() { return this._dicePool; }
 
+  /** Get DataConfig instance. */
+  getDataConfig() { return this._dataConfig; }
+
   /** Get Economy instance. */
   getEconomy() { return this._economy; }
 
@@ -397,6 +414,9 @@ class GameFlow {
 
   /** Get Shop instance. */
   getShop() { return this._shop; }
+
+  /** Get GameLog instance. */
+  getLog() { return this._log; }
 
   // ---------------------------------------------------------------------------
   // Internal

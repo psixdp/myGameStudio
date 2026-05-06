@@ -6,6 +6,9 @@
     "minValue": 1,
     "maxValue": 6
   },
+  "passives": {
+    "maxSlots": 3
+  },
   "battle": {
     "consumablesPerRound": 2,
     "rollsPerRound": 1
