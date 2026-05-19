@@ -14,7 +14,7 @@ Desktop.ini
 .claude/docs/UPGRADE-PLAN.md
 CLAUDE.local.md
 production/session-logs/
-# production/session-state/ — 已纳入版本控制，供多客户端恢复上下文
+production/session-state/*.md
 
 # === Internal Planning (not for public) ===
 docs/IMPROVEMENTS-PROPOSAL.md
