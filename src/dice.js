@@ -32,7 +32,7 @@ class DicePool {
 
     // Create initial dice (un-rolled, value 0)
     for (let i = 0; i < this._initialCount; i++) {
-      this._dice.push({ value: 0, isTemp: false, isFrozen: false });
+      this._dice.push({ value: 0, isTemp: false, isFrozen: false, isHeld: false });
     }
   }
 
@@ -63,6 +63,55 @@ class DicePool {
   /** Whether roll() has been called at least once. */
   isRolled() {
     return this._rolled;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Hold / Reroll (留骰/重掷)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Mark dice as "held" (to be kept during reroll).
+   * Temporary dice (isTemp) cannot be held.
+   * @param {number[]} indices - indices to hold
+   */
+  hold(indices) {
+    for (const i of indices) {
+      if (i < 0 || i >= this._dice.length) continue;
+      if (this._dice[i].isTemp) continue;
+      this._dice[i].isHeld = true;
+    }
+  }
+
+  /**
+   * Reroll all dice that are NOT held (and not frozen).
+   * Uses the dice random stream.
+   */
+  rerollUnheld() {
+    for (const die of this._dice) {
+      if (die.isHeld || die.isFrozen) continue;
+      die.value = this._diceStream.nextInt(this._minFace, this._maxFace);
+    }
+  }
+
+  /**
+   * Clear all held states (call at start of each round).
+   */
+  clearHolds() {
+    for (const die of this._dice) {
+      die.isHeld = false;
+    }
+  }
+
+  /**
+   * Get indices of currently held dice.
+   * @returns {number[]}
+   */
+  getHeldIndices() {
+    const held = [];
+    for (let i = 0; i < this._dice.length; i++) {
+      if (this._dice[i].isHeld) held.push(i);
+    }
+    return held;
   }
 
   // ---------------------------------------------------------------------------
@@ -169,7 +218,7 @@ class DicePool {
     // Allow one beyond max
     if (this._dice.length >= this._maxCount + 1) return false;
     const value = this._cloneStream.nextInt(this._minFace, this._maxFace);
-    this._dice.push({ value, isTemp: true, isFrozen: false });
+    this._dice.push({ value, isTemp: true, isFrozen: false, isHeld: false });
     return true;
   }
 
@@ -181,7 +230,7 @@ class DicePool {
   addPermanentDie(initialValue) {
     if (this.getPermanentCount() >= this._maxCount) return false;
     const value = initialValue ?? 0;
-    this._dice.push({ value: this._clampFace(value), isTemp: false, isFrozen: false });
+    this._dice.push({ value: this._clampFace(value), isTemp: false, isFrozen: false, isHeld: false });
     return true;
   }
 

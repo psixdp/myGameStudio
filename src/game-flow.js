@@ -18,6 +18,7 @@ const GameState = {
   MENU: 'MENU',
   INITIALIZING: 'INITIALIZING',
   BATTLE: 'BATTLE',
+  HOLD_DECISION: 'HOLD_DECISION',    // 第一次投掷后，留骰决策阶段
   BOWL_COVERED: 'BOWL_COVERED',  // 投掷后、确认前（盖碗阶段）
   ROLL_RESULT: 'ROLL_RESULT',  // 兼容保留：映射为 BOWL_COVERED 阶段
   SHOP: 'SHOP',
@@ -216,6 +217,37 @@ class GameFlow {
     this._log.setRound(this._round);
     this._state = GameState.BOWL_COVERED;
     return rollResult;
+  }
+
+  /**
+   * New two-phase flow: Execute first roll only (steps 1-3).
+   * Transitions to HOLD_DECISION state for the hold/reroll phase.
+   * @returns {object|null} first roll result { dice, diceValues, targetScore } or null
+   */
+  executeFirstRoll() {
+    if (this._state !== GameState.BATTLE) {
+      return null;
+    }
+
+    const result = this._combat.executeFirstRoll(this._round);
+    this._state = GameState.HOLD_DECISION;
+    return result;
+  }
+
+  /**
+   * New two-phase flow: Confirm hold selection, execute second roll + scoring.
+   * Transitions from HOLD_DECISION to BOWL_COVERED.
+   * @param {number[]} heldIndices - indices of dice to keep
+   * @returns {object|null} score result or null if invalid state
+   */
+  confirmHold(heldIndices) {
+    if (this._state !== GameState.HOLD_DECISION) {
+      return null;
+    }
+
+    const result = this._combat.executeHoldAndReroll(heldIndices);
+    this._state = GameState.BOWL_COVERED;
+    return result;
   }
 
   /**
