@@ -65,6 +65,21 @@ class CheatingAbilities {
     return this._passives.map(p => ({ ...p }));
   }
 
+  /** Get current passive count. */
+  getPassiveCount() {
+    return this._passives.length;
+  }
+
+  /**
+   * Remove a passive by index.
+   * @param {number} index - index in _passives array
+   * @returns {object|null} removed passive, or null if invalid index
+   */
+  removePassive(index) {
+    if (index < 0 || index >= this._passives.length) return null;
+    return this._passives.splice(index, 1)[0];
+  }
+
   /** Check if player has a specific passive by ID. */
   hasPassive(id) {
     return this._passives.some(p => p.id === id);

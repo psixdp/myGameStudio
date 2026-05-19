@@ -76,14 +76,22 @@
       <!-- 操作按钮 -->
       <section class="actions">
         <button id="btn-roll" class="btn-primary">🎲 投掷</button>
-        <button id="btn-confirm-hold" class="btn-primary hidden">✋ 确认留骰</button>
         <button id="btn-use-consumable" class="btn-secondary">📦 使用消耗品</button>
+      </section>
+
+      <!-- 事件日志 -->
+      <section class="event-log" id="event-log">
+        <div class="event-log-header">
+          <h3>📜 事件记录</h3>
+          <button id="btn-toggle-log" class="btn-toggle-log">收起</button>
+        </div>
+        <div id="event-log-content" class="event-log-content"></div>
       </section>
     </main>
 
     <!-- 右侧被动栏 -->
     <section class="inventory-panel inventory-panel-passives">
-      <h3>⚡ 被动能力</h3>
+      <h3>⚡ 被动能力 <span id="passive-slots" class="passive-slots"></span></h3>
       <div id="passives-list" class="passives-list">
         <!-- 被动能力将动态生成 -->
       </div>
@@ -162,6 +170,7 @@
           <p>剩余代币: <span id="total-tokens">0</span></p>
         </div>
         <p id="gameover-message">再接再厉！</p>
+        <button id="btn-save-log" class="btn-secondary" style="margin-bottom: 10px;">💾 保存日志</button>
         <button id="btn-restart" class="btn-primary">再来一局</button>
       </div>
     </div>
@@ -172,6 +181,15 @@
         <h4>选择目标点数</h4>
         <div id="value-picker-buttons" class="value-picker-buttons"></div>
         <button id="btn-cancel-picker" class="btn btn-secondary">取消</button>
+      </div>
+    </div>
+
+    <!-- 被动替换选择器（被动槽满时购买新被动，默认隐藏） -->
+    <div id="passive-replace-overlay" class="overlay hidden">
+      <div class="value-picker-panel" role="dialog" aria-modal="true" aria-label="替换被动能力">
+        <h4>被动槽已满，选择一个替换</h4>
+        <div id="passive-replace-buttons" class="passive-replace-list"></div>
+        <button id="btn-cancel-replace" class="btn btn-secondary">取消购买</button>
       </div>
     </div>
 

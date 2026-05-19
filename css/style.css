@@ -343,38 +343,6 @@ body {
   font-size: 12px;
 }
 
-/* 留骰状态 */
-.die.holdable {
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.die.held {
-  background: linear-gradient(145deg, #6bcb77, #2ecc71);
-  box-shadow: 0 0 15px rgba(46, 204, 113, 0.8);
-  border: 3px solid #27ae60;
-  transform: scale(1.08);
-}
-.die.held::after {
-  content: "✋";
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  font-size: 12px;
-}
-.die.unheld {
-  opacity: 0.55;
-  border: 2px dashed #666;
-}
-.die.unheld:hover {
-  opacity: 0.8;
-  border-color: #2ecc71;
-}
-.die.no-hold {
-  cursor: not-allowed;
-  opacity: 0.4;
-  border: 2px dashed #e74c3c;
-}
-
 /* 出千微调动画 - 骰子偷偷被拨动 */
 .die.nudge {
   animation: nudge-cheat 0.3s ease-out;
@@ -893,6 +861,44 @@ button:disabled {
 .value-picker-panel .btn-secondary:hover {
   background: rgba(255,255,255,0.1);
   color: #e2e8f0;
+}
+
+/* ==================== 被动替换选择器 ==================== */
+.passive-replace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.passive-replace-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.passive-replace-item:hover {
+  background: rgba(231, 76, 60, 0.3);
+  border-color: #e74c3c;
+}
+
+.passive-replace-item .replace-name {
+  font-weight: 600;
+}
+
+.passive-replace-item .replace-hint {
+  font-size: 12px;
+  color: #95a5a6;
 }
 
 /* ==================== 商店 ==================== */
@@ -1468,5 +1474,112 @@ button:disabled {
 }
 
 .scoring-rules-content::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* ==================== 事件日志 ==================== */
+.event-log {
+  background: rgba(15, 52, 96, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+}
+
+.event-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.event-log-header h3 {
+  font-size: 14px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.btn-toggle-log {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #aaa;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-toggle-log:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.event-log-content {
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #bdc3c7;
+  font-family: 'Courier New', monospace;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.event-log-content.collapsed {
+  display: none;
+}
+
+.event-log-content .log-entry {
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.event-log-content .log-entry:last-child {
+  border-bottom: none;
+}
+
+.event-log-content .log-roll {
+  color: #3498db;
+}
+
+.event-log-content .log-consumable {
+  color: #e67e22;
+}
+
+.event-log-content .log-victory {
+  color: #2ecc71;
+}
+
+.event-log-content .log-defeat {
+  color: #e94560;
+}
+
+.event-log-content .log-shop {
+  color: #9b59b6;
+}
+
+.event-log-content .log-system {
+  color: #95a5a6;
+}
+
+.event-log-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.event-log-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.event-log-content::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 3px;
+}
+
+.event-log-content::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }

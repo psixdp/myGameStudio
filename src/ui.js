@@ -178,8 +178,8 @@ class GameUI {
     this._selectedDieIndex = null;    // 选中的骰子索引
     this._selectedDieIndex2 = null;   // 第二个选中的骰子索引（用于换位）
 
-    // Hold state
-    this._heldIndices = new Set();    // 留骰阶段：玩家标记保留的骰子索引
+    // Log state
+    this._logCollapsed = false;
   }
 
   /**
@@ -243,7 +243,6 @@ class GameUI {
       // Actions
       btnRoll: document.getElementById('btn-roll'),
       btnConfirmResult: document.getElementById('btn-confirm-result'),
-      btnConfirmHold: document.getElementById('btn-confirm-hold'),
       btnUseConsumable: document.getElementById('btn-use-consumable'),
 
       // Shop
@@ -267,6 +266,7 @@ class GameUI {
       totalTokens: document.getElementById('total-tokens'),
       gameoverMessage: document.getElementById('gameover-message'),
       btnRestart: document.getElementById('btn-restart'),
+      btnSaveLog: document.getElementById('btn-save-log'),
 
       // Scoring Rules
       btnScoringRules: document.getElementById('btn-scoring-rules'),
@@ -275,6 +275,16 @@ class GameUI {
       scoringDiceValues: document.getElementById('scoring-dice-values'),
       scoringPassives: document.getElementById('scoring-passives'),
       scoringTableBody: document.getElementById('scoring-table-body'),
+
+      // Event Log
+      eventLog: document.getElementById('event-log'),
+      eventLogContent: document.getElementById('event-log-content'),
+      btnToggleLog: document.getElementById('btn-toggle-log'),
+
+      // Passive Replace
+      passiveReplaceOverlay: document.getElementById('passive-replace-overlay'),
+      passiveReplaceButtons: document.getElementById('passive-replace-buttons'),
+      btnCancelReplace: document.getElementById('btn-cancel-replace'),
     };
   }
 
@@ -282,14 +292,15 @@ class GameUI {
   _bindEvents() {
     this._elements.btnRoll.addEventListener('click', () => this._onRoll());
     this._elements.btnConfirmResult.addEventListener('click', () => this._onConfirmResult());
-    this._elements.btnConfirmHold.addEventListener('click', () => this._onConfirmHold());
     this._elements.btnUseConsumable.addEventListener('click', () => this._onUseConsumable());
     this._elements.btnRefreshShop.addEventListener('click', () => this._onRefreshShop());
     this._elements.btnCloseShop.addEventListener('click', () => this._onCloseShop());
     this._elements.btnRestart.addEventListener('click', () => this._onRestart());
+    this._elements.btnSaveLog.addEventListener('click', () => this._downloadLog());
     this._elements.btnScoringRules.addEventListener('click', () => this._onShowScoringRules());
     this._elements.btnCloseScoringRules.addEventListener('click', () => this._onCloseScoringRules());
     this._elements.btnCloseDetail.addEventListener('click', () => this._closeDetail());
+    this._elements.btnToggleLog.addEventListener('click', () => this._toggleLog());
     this._elements.detailOverlay.addEventListener('click', (e) => {
       if (e.target === this._elements.detailOverlay) this._closeDetail();
     });
@@ -301,6 +312,13 @@ class GameUI {
       if (e.target === this._elements.valuePickerOverlay) this._hideValuePicker();
     });
     document.getElementById('btn-cancel-picker').addEventListener('click', () => this._hideValuePicker());
+
+    // Passive replace
+    this._pendingReplace = null; // { shopSlotIndex, item }
+    this._elements.btnCancelReplace.addEventListener('click', () => this._hidePassiveReplace());
+    this._elements.passiveReplaceOverlay.addEventListener('click', (e) => {
+      if (e.target === this._elements.passiveReplaceOverlay) this._hidePassiveReplace();
+    });
   }
 
   /** ==================== 渲染主入口 ==================== */
@@ -312,7 +330,7 @@ class GameUI {
     }
 
     // 清理选择模式（如果不在投掷后中间状态）
-    if (!this._isPostRollState(state) && state !== GameState.HOLD_DECISION) {
+    if (!this._isPostRollState(state)) {
       this._isSelectingTarget = false;
       this._selectedDieIndex = null;
       this._selectedDieIndex2 = null;
@@ -323,9 +341,6 @@ class GameUI {
     switch (state) {
       case GameState.BATTLE:
         this._renderBattle();
-        break;
-      case GameState.HOLD_DECISION:
-        this._renderHoldDecision();
         break;
       case GameState.BOWL_COVERED:
       case GameState.ROLL_RESULT:
@@ -358,122 +373,6 @@ class GameUI {
 
     this._elements.categoryName.textContent = `牌型：${text}`;
     this._elements.categoryName.classList.remove('hidden');
-  }
-
-  /** ==================== 渲染留骰决策阶段 ==================== */
-  _renderHoldDecision() {
-    const combat = this._gameFlow.getCombat();
-    const info = combat.getCurrentRoundInfo();
-    if (!info) return;
-
-    const round = this._gameFlow.getCurrentRound();
-    const total = this._gameFlow.getTotalRounds();
-    const economy = this._gameFlow.getEconomy();
-    const enemy = this._gameFlow.getEnemy();
-    const cheating = this._gameFlow.getCheating();
-    const dicePool = this._gameFlow.getDicePool();
-
-    // 顶部信息
-    this._elements.roundDisplay.innerHTML = `Round <strong>${round}</strong>/${total}`;
-    this._elements.tokensDisplay.innerHTML = `Tokens: <strong>${economy.getBalance()}</strong>`;
-
-    // 敌人信息
-    this._elements.enemyName.textContent = enemy.getName();
-    this._elements.targetScore.textContent = enemy.getTargetScore();
-    this._renderWeakness(cheating);
-    this._renderEnemyRules(enemy);
-    this._renderDecreeOverride(cheating);
-
-    // 骰子（可点击切换留/掷）
-    const dice = dicePool.getDice();
-    this._renderHoldDice(dice);
-
-    // 分数占位
-    this._elements.currentScore.textContent = '?';
-    this._elements.targetScoreDisplay.textContent = enemy.getTargetScore();
-    this._setRollStatus('选择要保留的骰子', 'warning');
-    this._setCategoryLabel('');
-
-    // 消耗品和被动
-    this._renderConsumables(cheating.getConsumables());
-    this._renderPassives(cheating.getPassives());
-
-    // 隐藏遮罩
-    this._elements.shopOverlay.classList.add('hidden');
-    this._elements.gameoverOverlay.classList.add('hidden');
-    this._elements.diceBowl.classList.add('hidden');
-  }
-
-  /** 渲染留骰阶段的骰子（可点击切换） */
-  _renderHoldDice(dice) {
-    this._elements.diceContainer.innerHTML = '';
-
-    for (let i = 0; i < dice.length; i++) {
-      const d = dice[i];
-      const die = document.createElement('div');
-      die.className = 'die holdable';
-
-      if (d.isTemp) {
-        die.classList.add('temp', 'no-hold');
-        die.title = '临时骰子不可保留';
-      } else if (this._heldIndices.has(i)) {
-        die.classList.add('held');
-        die.title = '点击释放';
-      } else {
-        die.classList.add('unheld');
-        die.title = '点击保留';
-      }
-
-      die.textContent = d.value;
-      die.addEventListener('click', () => this._onToggleHold(i, d.isTemp));
-      this._elements.diceContainer.appendChild(die);
-    }
-  }
-
-  /** 切换骰子的留/掷状态 */
-  _onToggleHold(index, isTemp) {
-    if (isTemp) return; // 临时骰子不可保留
-    if (this._heldIndices.has(index)) {
-      this._heldIndices.delete(index);
-    } else {
-      this._heldIndices.add(index);
-    }
-    // 重新渲染骰子
-    const dicePool = this._gameFlow.getDicePool();
-    this._renderHoldDice(dicePool.getDice());
-    this._updateButtons();
-  }
-
-  /** 确认留骰，执行二次投掷 */
-  async _onConfirmHold() {
-    const heldArray = Array.from(this._heldIndices);
-
-    // 二次投掷动画
-    const diceElements = this._elements.diceContainer.querySelectorAll('.die.unheld');
-    diceElements.forEach(d => d.classList.add('rolling'));
-
-    // 滚动期间更新未保留骰子的显示
-    const rollInterval = setInterval(() => {
-      diceElements.forEach(d => {
-        const randomValue = Math.floor(Math.random() * 6) + 1;
-        d.textContent = randomValue;
-      });
-    }, 100);
-
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    clearInterval(rollInterval);
-
-    // 执行留骰+二次投掷
-    const result = this._gameFlow.confirmHold(heldArray);
-
-    // 清空留骰状态
-    this._heldIndices.clear();
-
-    // 显示碗盖阶段
-    await this._showBowlStatus();
-
-    this._pendingRollResult = result;
-    this._render();
   }
 
   /** ==================== 渲染投掷结果（分数对比阶段） ==================== */
@@ -685,6 +584,13 @@ class GameUI {
   _renderPassives(passives) {
     this._elements.passivesList.innerHTML = '';
 
+    // Show slot count
+    const maxSlots = this._gameFlow.getDataConfig().getGlobal().passives?.maxSlots ?? 3;
+    const slotsEl = document.getElementById('passive-slots');
+    if (slotsEl) {
+      slotsEl.textContent = `(${passives.length}/${maxSlots})`;
+    }
+
     if (passives.length === 0) {
       this._elements.passivesList.innerHTML = '<span style="color:#666;font-style:italic;">（空）</span>';
       if (this._activeDetail?.type === 'passive') this._closeDetail();
@@ -766,6 +672,9 @@ class GameUI {
 
     // 渲染商店物品
     const items = shop.getDisplayItems();
+    const cheating = this._gameFlow.getCheating();
+    const maxPassiveSlots = this._gameFlow.getDataConfig().getGlobal().passives?.maxSlots ?? 3;
+    const passiveSlotsFull = cheating.getPassiveCount() >= maxPassiveSlots;
     this._elements.shopItems.innerHTML = '';
 
     if (items.length === 0) {
@@ -776,10 +685,12 @@ class GameUI {
 
         const div = document.createElement('div');
         div.className = 'shop-item';
+        const fullHint = (item.type === 'passive' && passiveSlotsFull)
+          ? '<span style="font-size:11px;color:#e67e22;">⚠ 槽位已满(需替换)</span><br>' : '';
         div.innerHTML = `
           <div class="shop-item-info">
             <div class="shop-item-name">${item.name}</div>
-            <div class="shop-item-desc">${item.description}</div>
+            <div class="shop-item-desc">${fullHint}${item.description}</div>
           </div>
           <div class="shop-item-cost">${item.cost}代币</div>
         `;
@@ -827,25 +738,15 @@ class GameUI {
 
     this._elements.gameoverOverlay.classList.remove('hidden');
     this._elements.shopOverlay.classList.add('hidden');
+
+    // 渲染日志
+    this._renderLog();
   }
 
   /** ==================== 更新按钮状态 ==================== */
   _updateButtons() {
     const state = this._gameFlow.getState();
     const cheating = this._gameFlow.getCheating();
-
-    // 留骰决策阶段：显示确认留骰按钮
-    if (state === GameState.HOLD_DECISION) {
-      this._elements.btnRoll.disabled = true;
-      this._elements.btnConfirmResult.classList.add('hidden');
-      this._elements.btnConfirmHold.classList.remove('hidden');
-      this._elements.btnConfirmHold.textContent = `✋ 确认留骰（保留${this._heldIndices.size}颗）`;
-      this._elements.btnUseConsumable.disabled = true;
-      return;
-    }
-
-    // 正常流程隐藏确认留骰按钮
-    this._elements.btnConfirmHold.classList.add('hidden');
 
     // 投掷后中间状态：显示动态按钮，允许使用消耗品
     if (this._isPostRollState(state)) {
@@ -916,14 +817,32 @@ class GameUI {
     clearInterval(rollInterval);
     diceElements.forEach(d => d.classList.remove('rolling'));
 
-    // Phase 1: 执行第一次投掷（进入留骰决策阶段）
-    const rollResult = this._gameFlow.executeFirstRoll();
+    // Phase 1: 执行投掷阶段（不判定胜负）
+    const rollResult = this._gameFlow.executeRollPhase();
 
-    // 存储结果用于留骰阶段渲染
-    this._pendingRollResult = null; // 留骰阶段不需要 pendingRollResult
-    this._heldIndices.clear();
+    // 记录投掷日志
+    if (rollResult) {
+      const log = this._gameFlow.getLog();
+      log.logRoll(
+        rollResult.diceValues,
+        rollResult.matchedCategory.id,
+        rollResult.baseScore,
+        rollResult.adjustedBase,
+        rollResult.flatBonus,
+        rollResult.multiplier,
+        rollResult.score,
+        rollResult.targetScore
+      );
+      this._renderLog();
+    }
+
+    // 显示碗盖扣下动画
+    await this._showBowlStatus();
+
+    // 存储投掷结果用于显示（此时还未判定胜负）
+    this._pendingRollResult = rollResult;
     this._isRolling = false;
-    this._render();  // 显示留骰决策界面
+    this._render();  // 将显示分数对比和可使用消耗品
   }
 
   /** 显示“可出千”状态徽标（不遮挡 UI） */
@@ -967,6 +886,7 @@ class GameUI {
     this._gameFlow.finalizeBattle();
 
     this._pendingRollResult = null;  // 清除投掷结果
+    this._renderLog();
     this._render();  // 渲染下一阶段（商店/游戏结束）
   }
 
@@ -1162,6 +1082,23 @@ class GameUI {
       // 重新计算分数并更新缓存的结果
       this._pendingRollResult = this._gameFlow.recalculateRollResult();
 
+      // 记录消耗品使用和重算日志
+      const log = this._gameFlow.getLog();
+      log.logConsumableUse(ability.name, effectMessage);
+      if (this._pendingRollResult) {
+        log.logRecalculation(
+          this._pendingRollResult.diceValues,
+          this._pendingRollResult.matchedCategory.id,
+          this._pendingRollResult.baseScore,
+          this._pendingRollResult.adjustedBase,
+          this._pendingRollResult.flatBonus,
+          this._pendingRollResult.multiplier,
+          this._pendingRollResult.score,
+          this._pendingRollResult.targetScore
+        );
+      }
+      this._renderLog();
+
       // 重置选择状态
       this._selectedConsumableIndex = null;
       this._selectedDieIndex = null;
@@ -1182,10 +1119,16 @@ class GameUI {
     }
 
     const economy = this._gameFlow.getEconomy();
+    const result = shop.buy(index);
 
-    if (shop.buy(index)) {
+    if (result === true) {
       this._showToast(`购买成功：${item.name}`);
+      this._gameFlow.getLog().logShopPurchase(item.name, item.cost, item.type);
+      this._renderLog();
       this._renderShop();
+    } else if (result === 'passive_slots_full') {
+      // Show replacement selector
+      this._showPassiveReplace(index, item);
     } else {
       if (economy.getBalance() < item.cost) {
         this._showToast('代币不足！');
@@ -1199,6 +1142,8 @@ class GameUI {
     const shop = this._gameFlow.getShop();
     if (shop.refresh()) {
       this._showToast('商店已刷新');
+      this._gameFlow.getLog().logShopRefresh(1);
+      this._renderLog();
       this._renderShop();
     } else {
       this._showToast('代币不足，无法刷新');
@@ -1214,7 +1159,6 @@ class GameUI {
     this._gameFlow.newGame();
     this._isRolling = false;
     this._selectedConsumableIndex = null;
-    this._heldIndices.clear();
     this._closeDetail();
     this._render();
   }
@@ -1222,6 +1166,49 @@ class GameUI {
   /** ==================== 辅助方法 ==================== */
   _isPostRollState(state) {
     return state === GameState.BOWL_COVERED || state === GameState.ROLL_RESULT;
+  }
+
+  /** ==================== 日志方法 ==================== */
+
+  /** 渲染日志面板 */
+  _renderLog() {
+    const log = this._gameFlow.getLog();
+    const entries = log.getEntries();
+
+    if (entries.length === 0) {
+      this._elements.eventLogContent.innerHTML = '';
+      return;
+    }
+
+    this._elements.eventLogContent.innerHTML = log.renderToHTML();
+    // Auto-scroll to bottom
+    this._elements.eventLogContent.scrollTop = this._elements.eventLogContent.scrollHeight;
+  }
+
+  /** 切换日志面板折叠状态 */
+  _toggleLog() {
+    this._logCollapsed = !this._logCollapsed;
+    this._elements.eventLogContent.classList.toggle('collapsed', this._logCollapsed);
+    this._elements.btnToggleLog.textContent = this._logCollapsed ? '展开' : '收起';
+  }
+
+  /** 下载日志文件（游戏结束时调用） */
+  _downloadLog() {
+    const log = this._gameFlow.getLog();
+    const result = this._gameFlow.getResult();
+    if (!result) return;
+
+    const text = log.exportAsText();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `log${timestamp}.txt`;
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   /**
@@ -1293,6 +1280,67 @@ class GameUI {
     this._pendingFaceChange = null;
   }
 
+  /** ==================== 被动替换选择器 ==================== */
+
+  /** 显示被动替换面板 */
+  _showPassiveReplace(shopSlotIndex, item) {
+    this._pendingReplace = { shopSlotIndex, item };
+    const cheating = this._gameFlow.getCheating();
+    const passives = cheating.getPassives();
+    const container = this._elements.passiveReplaceButtons;
+    container.innerHTML = '';
+
+    passives.forEach((p, index) => {
+      const btn = document.createElement('div');
+      btn.className = 'passive-replace-item';
+      btn.innerHTML = `<span class="replace-name">${p.name}</span><span class="replace-hint">点击替换</span>`;
+      btn.addEventListener('click', () => this._onPassiveReplaced(index));
+      container.appendChild(btn);
+    });
+
+    this._elements.passiveReplaceOverlay.classList.remove('hidden');
+  }
+
+  /** 取消替换 */
+  _hidePassiveReplace() {
+    this._elements.passiveReplaceOverlay.classList.add('hidden');
+    this._pendingReplace = null;
+  }
+
+  /** 玩家确认替换：移除旧被动 → 购买新被动 */
+  _onPassiveReplaced(passiveIndex) {
+    if (!this._pendingReplace) return;
+    const { shopSlotIndex, item } = this._pendingReplace;
+    this._elements.passiveReplaceOverlay.classList.add('hidden');
+
+    const cheating = this._gameFlow.getCheating();
+    const removed = cheating.removePassive(passiveIndex);
+    if (!removed) {
+      this._showToast('替换失败');
+      this._pendingReplace = null;
+      return;
+    }
+
+    // Now buy the new passive (slot is guaranteed available)
+    const shop = this._gameFlow.getShop();
+    const result = shop.buy(shopSlotIndex);
+
+    if (result === true) {
+      this._showToast(`替换成功：${removed.name} → ${item.name}`);
+      const log = this._gameFlow.getLog();
+      log.logConsumableUse('替换', `${removed.name} → ${item.name}`);
+      log.logShopPurchase(item.name, item.cost, item.type);
+      this._renderLog();
+      this._renderShop();
+    } else {
+      // Buy failed after removing old passive — refund by re-adding
+      cheating.addPassive(removed.id, removed.actualCost);
+      this._showToast('购买失败，已恢复原被动');
+    }
+
+    this._pendingReplace = null;
+  }
+
   /**
    * 玩家确认选值后：消耗道具 → 应用效果 → 渲染
    * @param {number} value - 玩家选择的点数(1-6)
@@ -1322,6 +1370,24 @@ class GameUI {
 
     // 重新计算并渲染
     this._pendingRollResult = this._gameFlow.recalculateRollResult();
+
+    // 记录消耗品使用和重算日志
+    const log = this._gameFlow.getLog();
+    log.logConsumableUse(ability.name, `骰子设为 ${value}`);
+    if (this._pendingRollResult) {
+      log.logRecalculation(
+        this._pendingRollResult.diceValues,
+        this._pendingRollResult.matchedCategory.id,
+        this._pendingRollResult.baseScore,
+        this._pendingRollResult.adjustedBase,
+        this._pendingRollResult.flatBonus,
+        this._pendingRollResult.multiplier,
+        this._pendingRollResult.score,
+        this._pendingRollResult.targetScore
+      );
+    }
+    this._renderLog();
+
     this._render();
   }
 

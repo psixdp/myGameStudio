@@ -8,6 +8,7 @@ import { CheatingAbilities } from './cheating.js';
 import { Enemy } from './enemy.js';
 import { Combat } from './combat.js';
 import { Shop } from './shop.js';
+import { GameLog } from './game-log.js';
 
 /**
  * Game state enumeration.
@@ -17,7 +18,6 @@ const GameState = {
   MENU: 'MENU',
   INITIALIZING: 'INITIALIZING',
   BATTLE: 'BATTLE',
-  HOLD_DECISION: 'HOLD_DECISION',    // 第一次投掷后，留骰决策阶段
   BOWL_COVERED: 'BOWL_COVERED',  // 投掷后、确认前（盖碗阶段）
   ROLL_RESULT: 'ROLL_RESULT',  // 兼容保留：映射为 BOWL_COVERED 阶段
   SHOP: 'SHOP',
@@ -58,6 +58,7 @@ class GameFlow {
     this._enemy = null;
     this._combat = null;
     this._shop = null;
+    this._log = new GameLog();
   }
 
   // ---------------------------------------------------------------------------
@@ -163,6 +164,11 @@ class GameFlow {
     this._round = 1;
     this._gameResult = null;
 
+    // Reset and start game log
+    this._log.clear();
+    this._log.setRound(this._round);
+    this._log.logGameStart(this._seed);
+
     // Pre-load first enemy so UI can display info before first roll
     this._enemy.loadForRound(this._round);
 
@@ -207,39 +213,9 @@ class GameFlow {
     }
 
     const rollResult = this._combat.executeRollPhase(this._round);
+    this._log.setRound(this._round);
     this._state = GameState.BOWL_COVERED;
     return rollResult;
-  }
-
-  /**
-   * New two-phase flow: Execute first roll only (steps 1-3).
-   * Transitions to HOLD_DECISION state for the hold/reroll phase.
-   * @returns {object|null} first roll result { dice, diceValues, targetScore } or null
-   */
-  executeFirstRoll() {
-    if (this._state !== GameState.BATTLE) {
-      return null;
-    }
-
-    const result = this._combat.executeFirstRoll(this._round);
-    this._state = GameState.HOLD_DECISION;
-    return result;
-  }
-
-  /**
-   * New two-phase flow: Confirm hold selection, execute second roll + scoring.
-   * Transitions from HOLD_DECISION to BOWL_COVERED.
-   * @param {number[]} heldIndices - indices of dice to keep
-   * @returns {object|null} score result or null if invalid state
-   */
-  confirmHold(heldIndices) {
-    if (this._state !== GameState.HOLD_DECISION) {
-      return null;
-    }
-
-    const result = this._combat.executeHoldAndReroll(heldIndices);
-    this._state = GameState.BOWL_COVERED;
-    return result;
   }
 
   /**
@@ -254,6 +230,9 @@ class GameFlow {
 
     const result = this._combat.finalizeResult();
 
+    // Log battle result
+    this._log.logBattleResult(result.victory, result.score, result.targetScore, result.tokensEarned);
+
     // Determine next state
     if (result.victory) {
       if (this._round >= this.getTotalRounds()) {
@@ -264,6 +243,7 @@ class GameFlow {
           score: result.score,
         };
         this._state = GameState.VICTORY;
+        this._log.logGameEnd('VICTORY', this._round);
       } else {
         // Enter shop
         this._shop.open(this._round);
@@ -277,6 +257,7 @@ class GameFlow {
         score: result.score,
       };
       this._state = GameState.DEFEAT;
+      this._log.logGameEnd('DEFEAT', this._round);
     }
 
     return result;
@@ -346,6 +327,7 @@ class GameFlow {
 
     this._shop.close();
     this._round++;
+    this._log.setRound(this._round);
 
     // Clear previous round's combat result so UI doesn't show stale data
     this._combat.reset();
@@ -415,6 +397,9 @@ class GameFlow {
   /** Get DicePool instance. */
   getDicePool() { return this._dicePool; }
 
+  /** Get DataConfig instance. */
+  getDataConfig() { return this._dataConfig; }
+
   /** Get Economy instance. */
   getEconomy() { return this._economy; }
 
@@ -429,6 +414,9 @@ class GameFlow {
 
   /** Get Shop instance. */
   getShop() { return this._shop; }
+
+  /** Get GameLog instance. */
+  getLog() { return this._log; }
 
   // ---------------------------------------------------------------------------
   // Internal
