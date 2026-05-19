@@ -336,3 +336,91 @@ describe('getDice returns copies', () => {
     assert.notStrictEqual(pool.getValues()[0], 99);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Hold / Reroll (留骰/重掷)
+// ---------------------------------------------------------------------------
+describe('Hold and reroll', () => {
+  it('hold marks dice as held', () => {
+    const pool = makePool();
+    pool.roll();
+    pool.hold([0, 2]);
+    assert.deepStrictEqual(pool.getHeldIndices(), [0, 2]);
+  });
+
+  it('hold ignores out-of-range indices', () => {
+    const pool = makePool();
+    pool.roll();
+    pool.hold([-1, 99]);
+    assert.deepStrictEqual(pool.getHeldIndices(), []);
+  });
+
+  it('hold ignores temp dice', () => {
+    const pool = makePool();
+    pool.roll();
+    pool.addTempDie(); // index 4 is temp
+    pool.hold([0, 4]); // index 4 should be ignored
+    assert.deepStrictEqual(pool.getHeldIndices(), [0]);
+  });
+
+  it('rerollUnheld only rerolls unheld dice', () => {
+    const pool = makePool(42);
+    pool.roll();
+    const valuesBefore = pool.getValues();
+    pool.hold([1, 3]);
+    pool.rerollUnheld();
+    const valuesAfter = pool.getValues();
+    // Held dice should not change
+    assert.strictEqual(valuesAfter[1], valuesBefore[1]);
+    assert.strictEqual(valuesAfter[3], valuesBefore[3]);
+  });
+
+  it('rerollUnheld produces valid values (1-6)', () => {
+    const pool = makePool();
+    pool.roll();
+    pool.hold([0]);
+    pool.rerollUnheld();
+    const values = pool.getValues();
+    for (const v of values) {
+      assert.ok(v >= 1 && v <= 6, `value ${v} out of range`);
+    }
+  });
+
+  it('clearHolds resets all held states', () => {
+    const pool = makePool();
+    pool.roll();
+    pool.hold([0, 1, 2]);
+    assert.deepStrictEqual(pool.getHeldIndices(), [0, 1, 2]);
+    pool.clearHolds();
+    assert.deepStrictEqual(pool.getHeldIndices(), []);
+  });
+
+  it('getHeldIndices returns empty array when nothing held', () => {
+    const pool = makePool();
+    pool.roll();
+    assert.deepStrictEqual(pool.getHeldIndices(), []);
+  });
+
+  it('hold all dice then rerollUnheld changes nothing', () => {
+    const pool = makePool(42);
+    pool.roll();
+    const valuesBefore = [...pool.getValues()];
+    pool.hold([0, 1, 2, 3]);
+    pool.rerollUnheld();
+    assert.deepStrictEqual(pool.getValues(), valuesBefore);
+  });
+
+  it('hold none then rerollUnheld rerolls all', () => {
+    const pool = makePool(42);
+    pool.roll();
+    const valuesBefore = [...pool.getValues()];
+    // Use different seed to ensure different values
+    const pool2 = makePool(42);
+    pool2.roll();
+    pool2.rerollUnheld();
+    // Reroll uses next random values, so some should differ
+    // (statistical: could theoretically be same but extremely unlikely for 4 dice)
+    const same = pool2.getValues().every((v, i) => v === valuesBefore[i]);
+    assert.ok(!same, 'rerolling all dice should produce different values');
+  });
+});

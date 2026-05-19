@@ -177,6 +177,9 @@ class GameUI {
     this._isSelectingTarget = false;  // 是否正在选择骰子目标
     this._selectedDieIndex = null;    // 选中的骰子索引
     this._selectedDieIndex2 = null;   // 第二个选中的骰子索引（用于换位）
+
+    // Hold state
+    this._heldIndices = new Set();    // 留骰阶段：玩家标记保留的骰子索引
   }
 
   /**
@@ -240,6 +243,7 @@ class GameUI {
       // Actions
       btnRoll: document.getElementById('btn-roll'),
       btnConfirmResult: document.getElementById('btn-confirm-result'),
+      btnConfirmHold: document.getElementById('btn-confirm-hold'),
       btnUseConsumable: document.getElementById('btn-use-consumable'),
 
       // Shop
@@ -278,6 +282,7 @@ class GameUI {
   _bindEvents() {
     this._elements.btnRoll.addEventListener('click', () => this._onRoll());
     this._elements.btnConfirmResult.addEventListener('click', () => this._onConfirmResult());
+    this._elements.btnConfirmHold.addEventListener('click', () => this._onConfirmHold());
     this._elements.btnUseConsumable.addEventListener('click', () => this._onUseConsumable());
     this._elements.btnRefreshShop.addEventListener('click', () => this._onRefreshShop());
     this._elements.btnCloseShop.addEventListener('click', () => this._onCloseShop());
@@ -307,7 +312,7 @@ class GameUI {
     }
 
     // 清理选择模式（如果不在投掷后中间状态）
-    if (!this._isPostRollState(state)) {
+    if (!this._isPostRollState(state) && state !== GameState.HOLD_DECISION) {
       this._isSelectingTarget = false;
       this._selectedDieIndex = null;
       this._selectedDieIndex2 = null;
@@ -318,6 +323,9 @@ class GameUI {
     switch (state) {
       case GameState.BATTLE:
         this._renderBattle();
+        break;
+      case GameState.HOLD_DECISION:
+        this._renderHoldDecision();
         break;
       case GameState.BOWL_COVERED:
       case GameState.ROLL_RESULT:
@@ -350,6 +358,122 @@ class GameUI {
 
     this._elements.categoryName.textContent = `牌型：${text}`;
     this._elements.categoryName.classList.remove('hidden');
+  }
+
+  /** ==================== 渲染留骰决策阶段 ==================== */
+  _renderHoldDecision() {
+    const combat = this._gameFlow.getCombat();
+    const info = combat.getCurrentRoundInfo();
+    if (!info) return;
+
+    const round = this._gameFlow.getCurrentRound();
+    const total = this._gameFlow.getTotalRounds();
+    const economy = this._gameFlow.getEconomy();
+    const enemy = this._gameFlow.getEnemy();
+    const cheating = this._gameFlow.getCheating();
+    const dicePool = this._gameFlow.getDicePool();
+
+    // 顶部信息
+    this._elements.roundDisplay.innerHTML = `Round <strong>${round}</strong>/${total}`;
+    this._elements.tokensDisplay.innerHTML = `Tokens: <strong>${economy.getBalance()}</strong>`;
+
+    // 敌人信息
+    this._elements.enemyName.textContent = enemy.getName();
+    this._elements.targetScore.textContent = enemy.getTargetScore();
+    this._renderWeakness(cheating);
+    this._renderEnemyRules(enemy);
+    this._renderDecreeOverride(cheating);
+
+    // 骰子（可点击切换留/掷）
+    const dice = dicePool.getDice();
+    this._renderHoldDice(dice);
+
+    // 分数占位
+    this._elements.currentScore.textContent = '?';
+    this._elements.targetScoreDisplay.textContent = enemy.getTargetScore();
+    this._setRollStatus('选择要保留的骰子', 'warning');
+    this._setCategoryLabel('');
+
+    // 消耗品和被动
+    this._renderConsumables(cheating.getConsumables());
+    this._renderPassives(cheating.getPassives());
+
+    // 隐藏遮罩
+    this._elements.shopOverlay.classList.add('hidden');
+    this._elements.gameoverOverlay.classList.add('hidden');
+    this._elements.diceBowl.classList.add('hidden');
+  }
+
+  /** 渲染留骰阶段的骰子（可点击切换） */
+  _renderHoldDice(dice) {
+    this._elements.diceContainer.innerHTML = '';
+
+    for (let i = 0; i < dice.length; i++) {
+      const d = dice[i];
+      const die = document.createElement('div');
+      die.className = 'die holdable';
+
+      if (d.isTemp) {
+        die.classList.add('temp', 'no-hold');
+        die.title = '临时骰子不可保留';
+      } else if (this._heldIndices.has(i)) {
+        die.classList.add('held');
+        die.title = '点击释放';
+      } else {
+        die.classList.add('unheld');
+        die.title = '点击保留';
+      }
+
+      die.textContent = d.value;
+      die.addEventListener('click', () => this._onToggleHold(i, d.isTemp));
+      this._elements.diceContainer.appendChild(die);
+    }
+  }
+
+  /** 切换骰子的留/掷状态 */
+  _onToggleHold(index, isTemp) {
+    if (isTemp) return; // 临时骰子不可保留
+    if (this._heldIndices.has(index)) {
+      this._heldIndices.delete(index);
+    } else {
+      this._heldIndices.add(index);
+    }
+    // 重新渲染骰子
+    const dicePool = this._gameFlow.getDicePool();
+    this._renderHoldDice(dicePool.getDice());
+    this._updateButtons();
+  }
+
+  /** 确认留骰，执行二次投掷 */
+  async _onConfirmHold() {
+    const heldArray = Array.from(this._heldIndices);
+
+    // 二次投掷动画
+    const diceElements = this._elements.diceContainer.querySelectorAll('.die.unheld');
+    diceElements.forEach(d => d.classList.add('rolling'));
+
+    // 滚动期间更新未保留骰子的显示
+    const rollInterval = setInterval(() => {
+      diceElements.forEach(d => {
+        const randomValue = Math.floor(Math.random() * 6) + 1;
+        d.textContent = randomValue;
+      });
+    }, 100);
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    clearInterval(rollInterval);
+
+    // 执行留骰+二次投掷
+    const result = this._gameFlow.confirmHold(heldArray);
+
+    // 清空留骰状态
+    this._heldIndices.clear();
+
+    // 显示碗盖阶段
+    await this._showBowlStatus();
+
+    this._pendingRollResult = result;
+    this._render();
   }
 
   /** ==================== 渲染投掷结果（分数对比阶段） ==================== */
@@ -710,6 +834,19 @@ class GameUI {
     const state = this._gameFlow.getState();
     const cheating = this._gameFlow.getCheating();
 
+    // 留骰决策阶段：显示确认留骰按钮
+    if (state === GameState.HOLD_DECISION) {
+      this._elements.btnRoll.disabled = true;
+      this._elements.btnConfirmResult.classList.add('hidden');
+      this._elements.btnConfirmHold.classList.remove('hidden');
+      this._elements.btnConfirmHold.textContent = `✋ 确认留骰（保留${this._heldIndices.size}颗）`;
+      this._elements.btnUseConsumable.disabled = true;
+      return;
+    }
+
+    // 正常流程隐藏确认留骰按钮
+    this._elements.btnConfirmHold.classList.add('hidden');
+
     // 投掷后中间状态：显示动态按钮，允许使用消耗品
     if (this._isPostRollState(state)) {
       this._elements.btnRoll.disabled = true;
@@ -779,16 +916,14 @@ class GameUI {
     clearInterval(rollInterval);
     diceElements.forEach(d => d.classList.remove('rolling'));
 
-    // Phase 1: 执行投掷阶段（不判定胜负）
-    const rollResult = this._gameFlow.executeRollPhase();
+    // Phase 1: 执行第一次投掷（进入留骰决策阶段）
+    const rollResult = this._gameFlow.executeFirstRoll();
 
-    // 显示碗盖扣下动画
-    await this._showBowlStatus();
-
-    // 存储投掷结果用于显示（此时还未判定胜负）
-    this._pendingRollResult = rollResult;
+    // 存储结果用于留骰阶段渲染
+    this._pendingRollResult = null; // 留骰阶段不需要 pendingRollResult
+    this._heldIndices.clear();
     this._isRolling = false;
-    this._render();  // 将显示分数对比和可使用消耗品
+    this._render();  // 显示留骰决策界面
   }
 
   /** 显示“可出千”状态徽标（不遮挡 UI） */
@@ -1079,6 +1214,7 @@ class GameUI {
     this._gameFlow.newGame();
     this._isRolling = false;
     this._selectedConsumableIndex = null;
+    this._heldIndices.clear();
     this._closeDetail();
     this._render();
   }
