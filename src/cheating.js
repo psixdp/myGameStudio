@@ -47,6 +47,9 @@ class CheatingAbilities {
     /** @type {number} Temporary round flat bonus (from consumables like 孤注一掷) */
     this._roundFlatBonus = 0;
 
+    /** @type {number} Downgrade bonus from 藏拙 passive (set externally by combat) */
+    this._downgradeBonus = 0;
+
     /** @type {number} Target score increase ratio for next round (from 魔鬼契约) */
     this._nextRoundTargetIncrease = 0;
   }
@@ -191,6 +194,7 @@ class CheatingAbilities {
     this._weaknessCategory = null;
     this._roundMultiplier = 1.0;
     this._roundFlatBonus = 0;
+    this._downgradeBonus = 0;
   }
 
   /**
@@ -236,6 +240,14 @@ class CheatingAbilities {
    */
   addRoundFlatBonus(bonus) {
     this._roundFlatBonus += bonus;
+  }
+
+  /**
+   * Set downgrade bonus from 藏拙 passive.
+   * @param {number} bonus
+   */
+  setDowngradeBonus(bonus) {
+    this._downgradeBonus = bonus;
   }
 
   // ---------------------------------------------------------------------------
@@ -363,6 +375,26 @@ class CheatingAbilities {
         const diceCount = dicePool.getValues().length;
         total += diceCount * (passive.params.perDie || 4);
       }
+
+      // 对子之王 (pair_king) - category bonus doubled
+      if (passive.effectType === 'category_bonus_doubled') {
+        if (matchedCategory.id === passive.params.category) {
+          total += matchedCategory.bonusValue || 0;
+        }
+      }
+
+      // 顺子直觉 (straight_intuition) - selected category flat bonus
+      if (passive.effectType === 'selected_category_flat_bonus') {
+        const cats = passive.params.categories || [];
+        if (cats.includes(matchedCategory.id)) {
+          total += passive.params.bonus || 0;
+        }
+      }
+
+      // 藏拙 (hidden_strength) - downgrade bonus (computed externally, added here)
+      if (passive.effectType === 'downgrade_bonus' && this._downgradeBonus) {
+        total += this._downgradeBonus;
+      }
     }
 
     // 透视 (insight) - weakness category bonus
@@ -417,6 +449,13 @@ class CheatingAbilities {
         if (sixCount > 0) {
           const perSix = passive.params.perSixMultiplier || 1.15;
           product *= Math.pow(perSix, sixCount);
+        }
+      }
+
+      // 三条专家 (three_expert) - selected category dice multiplier
+      if (passive.effectType === 'selected_dice_multiplier' && matchedCategory) {
+        if (matchedCategory.id === passive.params.category) {
+          product *= passive.params.multiplier || 1.5;
         }
       }
     }

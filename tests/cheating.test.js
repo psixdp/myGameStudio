@@ -675,3 +675,158 @@ describe('AC-20: 孤注一掷 (all_in) - sacrifice consumables', () => {
     assert.strictEqual(count, 0);
   });
 });
+
+// ===========================================================================
+// Category Selection Passives
+// ===========================================================================
+
+describe('category_bonus_doubled doubles category bonus', () => {
+  it('adds bonusValue for matching category (pair_king)', () => {
+    const sys = makeCheatingSystem();
+    // pair_king: category_bonus_doubled for 'pair'
+    sys._passives.push({
+      id: 'pair_king',
+      effectType: 'category_bonus_doubled',
+      params: { category: 'pair' },
+      name: '对子之王',
+      cost: 3,
+      type: 'passive'
+    });
+    // pair 的 bonusValue 在测试数据中为 0，手动构造带 bonusValue 的 category
+    const cat = { id: 'pair', minDice: 2, bonusValue: 2 };
+    const bonus = sys.getFlatBonuses(cat, makeMockDicePool([3, 3, 4, 5]), 2);
+    assert.strictEqual(bonus, 2);
+  });
+
+  it('does NOT apply for non-matching category', () => {
+    const sys = makeCheatingSystem();
+    sys._passives.push({
+      id: 'pair_king',
+      effectType: 'category_bonus_doubled',
+      params: { category: 'pair' },
+      name: '对子之王',
+      cost: 3,
+      type: 'passive'
+    });
+    const cat = { id: 'three_of_a_kind', minDice: 3, bonusValue: 5 };
+    const bonus = sys.getFlatBonuses(cat, makeMockDicePool([4, 4, 4, 2]), 3);
+    assert.strictEqual(bonus, 0);
+  });
+});
+
+describe('selected_category_flat_bonus adds flat bonus for matching category', () => {
+  it('adds flat bonus when category matches (straight_intuition)', () => {
+    const sys = makeCheatingSystem();
+    sys._passives.push({
+      id: 'straight_intuition',
+      effectType: 'selected_category_flat_bonus',
+      params: { categories: ['small_straight', 'large_straight'], bonus: 10 },
+      name: '顺子直觉',
+      cost: 3,
+      type: 'passive'
+    });
+    const cat = { id: 'small_straight', minDice: 4 };
+    const bonus = sys.getFlatBonuses(cat, makeMockDicePool([1, 2, 3, 4]), 4);
+    assert.strictEqual(bonus, 10);
+  });
+
+  it('does NOT apply for non-matching category', () => {
+    const sys = makeCheatingSystem();
+    sys._passives.push({
+      id: 'straight_intuition',
+      effectType: 'selected_category_flat_bonus',
+      params: { categories: ['small_straight', 'large_straight'], bonus: 10 },
+      name: '顺子直觉',
+      cost: 3,
+      type: 'passive'
+    });
+    const cat = { id: 'pair', minDice: 2 };
+    const bonus = sys.getFlatBonuses(cat, makeMockDicePool([3, 3, 4, 5]), 2);
+    assert.strictEqual(bonus, 0);
+  });
+});
+
+describe('selected_dice_multiplier multiplies for matching category', () => {
+  it('applies multiplier when category matches (three_expert)', () => {
+    const sys = makeCheatingSystem();
+    sys._passives.push({
+      id: 'three_expert',
+      effectType: 'selected_dice_multiplier',
+      params: { category: 'three_of_a_kind', multiplier: 1.5 },
+      name: '三条专家',
+      cost: 4,
+      type: 'passive'
+    });
+    const cat = { id: 'three_of_a_kind' };
+    const mult = sys.getMultipliers(cat, makeMockDicePool([4, 4, 4, 2]));
+    assert.strictEqual(mult, 1.5);
+  });
+
+  it('does NOT apply for non-matching category', () => {
+    const sys = makeCheatingSystem();
+    sys._passives.push({
+      id: 'three_expert',
+      effectType: 'selected_dice_multiplier',
+      params: { category: 'three_of_a_kind', multiplier: 1.5 },
+      name: '三条专家',
+      cost: 4,
+      type: 'passive'
+    });
+    const cat = { id: 'pair' };
+    const mult = sys.getMultipliers(cat, makeMockDicePool([3, 3, 4, 5]));
+    assert.strictEqual(mult, 1.0);
+  });
+});
+
+describe('setDowngradeBonus adds to flat bonuses', () => {
+  it('setDowngradeBonus contributes when downgrade_bonus passive exists', () => {
+    const sys = makeCheatingSystem();
+    // 添加藏拙被动
+    sys._passives.push({
+      id: 'hidden_strength',
+      effectType: 'downgrade_bonus',
+      params: { perLevel: 8 },
+      name: '藏拙',
+      cost: 4,
+      type: 'passive'
+    });
+    sys.setDowngradeBonus(16);
+    const cat = { id: 'bust', minDice: 0 };
+    const bonus = sys.getFlatBonuses(cat, makeMockDicePool([1, 2, 3, 4]), 0);
+    assert.strictEqual(bonus, 16);
+  });
+
+  it('downgradeBonus is 0 by default', () => {
+    const sys = makeCheatingSystem();
+    sys._passives.push({
+      id: 'hidden_strength',
+      effectType: 'downgrade_bonus',
+      params: { perLevel: 8 },
+      name: '藏拙',
+      cost: 4,
+      type: 'passive'
+    });
+    const cat = { id: 'bust', minDice: 0 };
+    const bonus = sys.getFlatBonuses(cat, makeMockDicePool([1, 2, 3, 4]), 0);
+    assert.strictEqual(bonus, 0);
+  });
+});
+
+describe('resetRoundState clears downgradeBonus', () => {
+  it('downgradeBonus resets to 0 after resetRoundState', () => {
+    const sys = makeCheatingSystem();
+    sys._passives.push({
+      id: 'hidden_strength',
+      effectType: 'downgrade_bonus',
+      params: { perLevel: 8 },
+      name: '藏拙',
+      cost: 4,
+      type: 'passive'
+    });
+    sys.setDowngradeBonus(24);
+    sys.resetRoundState();
+    const cat = { id: 'bust', minDice: 0 };
+    const bonus = sys.getFlatBonuses(cat, makeMockDicePool([1, 2, 3, 4]), 0);
+    assert.strictEqual(bonus, 0);
+  });
+});

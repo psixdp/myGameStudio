@@ -279,5 +279,75 @@
     "params": { "bonusPerSacrifice": 8 },
     "description": "销毁全部剩余消耗品，每个+8加成",
     "tags": ["risk"]
+  },
+  {
+    "id": "pair_king",
+    "name": "对子之王",
+    "type": "passive",
+    "cost": 3,
+    "effectType": "category_bonus_doubled",
+    "params": { "category": "pair" },
+    "description": "对子分类奖励翻倍",
+    "tags": ["scoring", "conditional"]
+  },
+  {
+    "id": "straight_intuition",
+    "name": "顺子直觉",
+    "type": "passive",
+    "cost": 3,
+    "effectType": "selected_category_flat_bonus",
+    "params": { "categories": ["small_straight", "large_straight"], "bonus": 10 },
+    "description": "选择顺子时额外+10",
+    "tags": ["scoring", "conditional"]
+  },
+  {
+    "id": "three_expert",
+    "name": "三条专家",
+    "type": "passive",
+    "cost": 4,
+    "effectType": "selected_dice_multiplier",
+    "params": { "category": "three_of_a_kind", "multiplier": 1.5 },
+    "description": "选择三条时骰子点数×1.5",
+    "tags": ["scoring", "conditional"]
+  },
+  {
+    "id": "yahtzee_hunter",
+    "name": "豹子猎手",
+    "type": "passive",
+    "cost": 6,
+    "effectType": "loose_all_same",
+    "params": { "allowedDifferent": 1 },
+    "description": "选择豹子时允许1颗骰子不同",
+    "tags": ["category_modify", "rule_break"]
+  },
+  {
+    "id": "hidden_strength",
+    "name": "藏拙",
+    "type": "passive",
+    "cost": 4,
+    "effectType": "downgrade_bonus",
+    "params": { "perLevel": 8 },
+    "description": "选择的分类比可匹配的最高分类低几级，每低一级+8",
+    "tags": ["scoring", "conditional"]
+  },
+  {
+    "id": "targeted_reroll",
+    "name": "定向",
+    "type": "consumable",
+    "cost": 2,
+    "effectType": "reroll_min",
+    "params": { "minValue": 3 },
+    "description": "指定一颗骰子重掷，结果≥3",
+    "tags": ["targeted"]
+  },
+  {
+    "id": "mimic",
+    "name": "模仿",
+    "type": "consumable",
+    "cost": 2,
+    "effectType": "copy_dice_value",
+    "params": {},
+    "description": "复制一颗骰子值到另一颗",
+    "tags": ["targeted_dual"]
   }
 ]

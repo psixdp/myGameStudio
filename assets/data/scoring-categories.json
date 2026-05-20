@@ -6,7 +6,7 @@
     "minDice": 3,
     "matchType": "all_same",
     "bonusType": "multiplier",
-    "bonusValue": 3
+    "bonusValue": 4
   },
   {
     "id": "full_house",
@@ -15,7 +15,7 @@
     "minDice": 5,
     "matchType": "full_house",
     "bonusType": "flat",
-    "bonusValue": 15
+    "bonusValue": 25
   },
   {
     "id": "large_straight",
@@ -25,7 +25,7 @@
     "matchType": "consecutive",
     "consecutiveCount": 5,
     "bonusType": "flat",
-    "bonusValue": 20
+    "bonusValue": 30
   },
   {
     "id": "small_straight",
@@ -35,7 +35,7 @@
     "matchType": "consecutive",
     "consecutiveCount": 4,
     "bonusType": "flat",
-    "bonusValue": 10
+    "bonusValue": 15
   },
   {
     "id": "three_of_a_kind",
@@ -45,7 +45,7 @@
     "matchType": "same_value",
     "matchCount": 3,
     "bonusType": "flat",
-    "bonusValue": 5
+    "bonusValue": 8
   },
   {
     "id": "pair",
@@ -55,7 +55,7 @@
     "matchType": "same_value",
     "matchCount": 2,
     "bonusType": "flat",
-    "bonusValue": 0
+    "bonusValue": 2
   },
   {
     "id": "bust",

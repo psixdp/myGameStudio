@@ -151,26 +151,26 @@ describe('AC-3: 5 dice matching', () => {
 // AC-4: Base score calculation
 // ---------------------------------------------------------------------------
 describe('AC-4: Base score calculation', () => {
-  it('[6,6,3] pair → sum=15, bonus=0, base=15', () => {
+  it('[6,6,3] pair → sum=15, bonus=2, base=17', () => {
     const r = scoreWith([6, 6, 3]);
     assert.strictEqual(r.breakdown.diceSum, 15);
-    assert.strictEqual(r.breakdown.categoryBase, 15); // flat: 15 + 0
+    assert.strictEqual(r.breakdown.categoryBase, 17); // flat: 15 + 2
   });
 
-  it('[6,6,6] yahtzee → sum=18, ×3=54', () => {
+  it('[6,6,6] yahtzee → sum=18, ×4=72', () => {
     const r = scoreWith([6, 6, 6]);
     assert.strictEqual(r.breakdown.diceSum, 18);
-    assert.strictEqual(r.breakdown.categoryBase, 54); // 18 × 3
+    assert.strictEqual(r.breakdown.categoryBase, 72); // 18 × 4
   });
 
-  it('[4,4,4,2] three_of_a_kind → sum=14, +5=19', () => {
+  it('[4,4,4,2] three_of_a_kind → sum=14, +8=22', () => {
     const r = scoreWith([4, 4, 4, 2]);
-    assert.strictEqual(r.breakdown.categoryBase, 19); // 14 + 5
+    assert.strictEqual(r.breakdown.categoryBase, 22); // 14 + 8
   });
 
-  it('[3,3,3,5,5] full_house → sum=19, +15=34', () => {
+  it('[3,3,3,5,5] full_house → sum=19, +25=44', () => {
     const r = scoreWith([3, 3, 3, 5, 5]);
-    assert.strictEqual(r.breakdown.categoryBase, 34); // 19 + 15
+    assert.strictEqual(r.breakdown.categoryBase, 44); // 19 + 25
   });
 });
 
@@ -186,8 +186,8 @@ describe('AC-5: Flat bonus stacking', () => {
       ],
     });
     assert.strictEqual(r.breakdown.flatBonusTotal, 30);
-    assert.strictEqual(r.breakdown.categoryBase, 54); // 18 × 3
-    assert.strictEqual(r.finalScore, 84); // (54 + 30) × 1.0
+    assert.strictEqual(r.breakdown.categoryBase, 72); // 18 × 4
+    assert.strictEqual(r.finalScore, 102); // (72 + 30) × 1.0
   });
 });
 
@@ -217,8 +217,8 @@ describe('AC-7: Floor rounding', () => {
         { id: 'greed', bonusType: 'multiplier', bonusValue: 1.2 },
       ],
     });
-    // base=18×3=54, flat=10, mult=1.2 → floor(64×1.2) = floor(76.8) = 76
-    assert.strictEqual(r.finalScore, 76);
+    // base=18×4=72, flat=10, mult=1.2 → floor(82×1.2) = floor(98.4) = 98
+    assert.strictEqual(r.finalScore, 98);
   });
 });
 
@@ -272,7 +272,7 @@ describe('AC-11: Lowest zero rule', () => {
     });
     assert.strictEqual(r.category.id, 'pair'); // matching uses raw values
     assert.strictEqual(r.breakdown.diceSum, 10); // scoring uses modified (0+5+5)
-    assert.strictEqual(r.breakdown.categoryBase, 10); // pair: 10 + 0
+    assert.strictEqual(r.breakdown.categoryBase, 12); // pair: 10 + 2
   });
 
   it('[2,4,4] + lowest_zero → sum=0+4+4=8', () => {
@@ -382,20 +382,20 @@ describe('AC-16: Full house strict 3+2', () => {
 // Combined scoring examples
 // ---------------------------------------------------------------------------
 describe('Combined scoring examples', () => {
-  it('GDD example 1: [6,6,3] no passives → 15', () => {
+  it('GDD example 1: [6,6,3] no passives → 17', () => {
     const r = scoreWith([6, 6, 3]);
-    assert.strictEqual(r.finalScore, 15);
+    assert.strictEqual(r.finalScore, 17);
   });
 
-  it('GDD example 2: [6,6,6] + pattern_master + greed → 76', () => {
+  it('GDD example 2: [6,6,6] + pattern_master + greed → 98', () => {
     const r = scoreWith([6, 6, 6], {
       passives: [
         { id: 'pattern_master', bonusType: 'flat', bonusValue: 10, categories: ['yahtzee'] },
         { id: 'greed', bonusType: 'multiplier', bonusValue: 1.2 },
       ],
     });
-    // base=18×3=54, flat=10, (54+10)×1.2 = 76.8 → floor = 76
-    assert.strictEqual(r.finalScore, 76);
+    // base=18×4=72, flat=10, (72+10)×1.2 = 98.4 → floor = 98
+    assert.strictEqual(r.finalScore, 98);
   });
 
   it('Full C30 example: [6,6,6,6] yahtzee + pattern_master(20) + greed(2.0)', () => {
@@ -405,8 +405,8 @@ describe('Combined scoring examples', () => {
         { id: 'greed', bonusType: 'multiplier', bonusValue: 2.0 },
       ],
     });
-    // base = 24 × 3 = 72, flat = 20, (72 + 20) × 2.0 = 184
-    assert.strictEqual(r.finalScore, 184);
+    // base = 24 × 4 = 96, flat = 20, (96 + 20) × 2.0 = 232
+    assert.strictEqual(r.finalScore, 232);
   });
 });
 

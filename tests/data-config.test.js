@@ -129,8 +129,8 @@ describe('AC-4: Unified query interface', () => {
     const consumables = config.getAbilities('consumable');
     const passives = config.getAbilities('passive');
     const expansions = config.getAbilities('dice_expansion');
-    assert.equal(consumables.length, 11);  // 9 original + 2 new (devils_bargain, all_in)
-    assert.equal(passives.length, 15);    // 9 original + 6 new (perfectionist, straight_momentum, double_vision, rainbow, lucky_six, dice_army)
+    assert.equal(consumables.length, 13);  // 9 original + 2 risk + 2 new (targeted_reroll, mimic)
+    assert.equal(passives.length, 20);    // 9 original + 6 conditional + 5 new (pair_king, straight_intuition, three_expert, yahtzee_hunter, hidden_strength)
     assert.equal(expansions.length, 2);
   });
 
