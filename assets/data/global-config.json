@@ -6,9 +6,13 @@
     "minValue": 1,
     "maxValue": 6
   },
+  "passives": {
+    "maxSlots": 3
+  },
   "battle": {
     "consumablesPerRound": 2,
-    "rollsPerRound": 1
+    "rollsPerRound": 2,
+    "categorySelection": true
   },
   "startingItems": {
     "freeConsumable": "face_change"
