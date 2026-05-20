@@ -129,8 +129,8 @@ describe('AC-4: Unified query interface', () => {
     const consumables = config.getAbilities('consumable');
     const passives = config.getAbilities('passive');
     const expansions = config.getAbilities('dice_expansion');
-    assert.equal(consumables.length, 13);  // 9 original + 2 risk + 2 new (targeted_reroll, mimic)
-    assert.equal(passives.length, 20);    // 9 original + 6 conditional + 5 new (pair_king, straight_intuition, three_expert, yahtzee_hunter, hidden_strength)
+    assert.equal(consumables.length, 17);  // 13 + 4 new consumables
+    assert.equal(passives.length, 27);    // 20 + 7 new passives
     assert.equal(expansions.length, 2);
   });
 
@@ -245,8 +245,8 @@ describe('C30 balance parameters', () => {
     assert.equal(config.get('globalConfig.dice.maxCount'), 7);
   });
 
-  it('greed multiplier = 2.0', () => {
-    assert.equal(config.getAbility('greed').params.multiplier, 2.0);
+  it('greed multiplier = 1.5', () => {
+    assert.equal(config.getAbility('greed').params.multiplier, 1.5);
   });
 
   it('pattern master bonus = 20, includes three_of_a_kind', () => {
@@ -260,19 +260,19 @@ describe('C30 balance parameters', () => {
   });
 
   it('enemy target scores match C30 curve', () => {
-    const expected = [8, 14, 22, 35, 50, 68, 88, 110];
+    const expected = [8, 14, 22, 30, 42, 55, 70, 88];
     for (let i = 0; i < 8; i++) {
       assert.equal(config.getEnemy(i + 1).targetScore, expected[i], `Round ${i + 1}`);
     }
   });
 
   it('token rewards match C30', () => {
-    const expected = [5, 5, 6, 6, 7, 7, 8, 9];
+    const expected = [6, 6, 7, 7, 8, 8, 9, 10];
     assert.deepEqual(config.get('economy.tokenRewards'), expected);
   });
 
-  it('token rewards total = 53', () => {
+  it('token rewards total = 61', () => {
     const total = config.get('economy.tokenRewards').reduce((s, v) => s + v, 0);
-    assert.equal(total, 53);
+    assert.equal(total, 61);
   });
 });
