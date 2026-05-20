@@ -144,7 +144,8 @@ export const DATA = {
       "description": "所有骰子最低点数为2",
       "tags": [
         "dice_modify"
-      ]
+      ],
+      "stream": "power"
     },
     {
       "id": "clone_dice",
@@ -172,7 +173,8 @@ export const DATA = {
       "description": "超出分类最低要求的每颗匹配骰子+5固定加成",
       "tags": [
         "scoring"
-      ]
+      ],
+      "stream": "excess"
     },
     {
       "id": "straight_eye",
@@ -186,7 +188,8 @@ export const DATA = {
       "description": "顺子允许间隔1（如1-3-4-5算小顺）",
       "tags": [
         "category_modify"
-      ]
+      ],
+      "stream": "straight"
     },
     {
       "id": "greed",
@@ -200,7 +203,8 @@ export const DATA = {
       "description": "最终分数×2.0（翻倍！）",
       "tags": [
         "multiplier"
-      ]
+      ],
+      "stream": "universal"
     },
     {
       "id": "pattern_master",
@@ -219,7 +223,8 @@ export const DATA = {
       "description": "满堂红、豹子和三条分类+20固定加成",
       "tags": [
         "scoring"
-      ]
+      ],
+      "stream": "pattern"
     },
     {
       "id": "decree_override",
@@ -235,7 +240,8 @@ export const DATA = {
       "tags": [
         "category_modify",
         "rule_break"
-      ]
+      ],
+      "stream": "universal"
     },
     {
       "id": "heaven_dice",
@@ -252,6 +258,7 @@ export const DATA = {
         "unsealable",
         "rule_break"
       ],
+      "stream": "power",
       "unsealable": true
     },
     {
@@ -267,7 +274,8 @@ export const DATA = {
       "tags": [
         "victory_condition",
         "rule_break"
-      ]
+      ],
+      "stream": "universal"
     },
     {
       "id": "spare_dice",
@@ -313,7 +321,8 @@ export const DATA = {
       "tags": [
         "multiplier",
         "conditional"
-      ]
+      ],
+      "stream": "pattern"
     },
     {
       "id": "straight_momentum",
@@ -332,7 +341,8 @@ export const DATA = {
       "tags": [
         "multiplier",
         "conditional"
-      ]
+      ],
+      "stream": "straight"
     },
     {
       "id": "double_vision",
@@ -347,7 +357,8 @@ export const DATA = {
       "tags": [
         "scoring",
         "conditional"
-      ]
+      ],
+      "stream": "pattern"
     },
     {
       "id": "rainbow",
@@ -435,7 +446,8 @@ export const DATA = {
       "tags": [
         "scoring",
         "conditional"
-      ]
+      ],
+      "stream": "pattern"
     },
     {
       "id": "straight_intuition",
@@ -454,7 +466,8 @@ export const DATA = {
       "tags": [
         "scoring",
         "conditional"
-      ]
+      ],
+      "stream": "straight"
     },
     {
       "id": "three_expert",
@@ -470,7 +483,8 @@ export const DATA = {
       "tags": [
         "scoring",
         "conditional"
-      ]
+      ],
+      "stream": "pattern"
     },
     {
       "id": "yahtzee_hunter",
@@ -485,7 +499,8 @@ export const DATA = {
       "tags": [
         "category_modify",
         "rule_break"
-      ]
+      ],
+      "stream": "pattern"
     },
     {
       "id": "hidden_strength",
@@ -500,7 +515,8 @@ export const DATA = {
       "tags": [
         "scoring",
         "conditional"
-      ]
+      ],
+      "stream": "excess"
     },
     {
       "id": "targeted_reroll",
@@ -669,6 +685,29 @@ export const DATA = {
       }
     }
   ],
+  "globalConfig": {
+    "dice": {
+      "initialCount": 4,
+      "maxCount": 7,
+      "sides": 6,
+      "minValue": 1,
+      "maxValue": 6
+    },
+    "passives": {
+      "maxSlots": 3
+    },
+    "battle": {
+      "consumablesPerRound": 2,
+      "rollsPerRound": 2,
+      "categorySelection": true
+    },
+    "startingItems": {
+      "freeConsumable": "face_change"
+    },
+    "rounds": {
+      "total": 8
+    }
+  },
   "scoringCategories": [
     {
       "id": "yahtzee",
@@ -738,27 +777,85 @@ export const DATA = {
       "bonusValue": 0
     }
   ],
-  "globalConfig": {
-    "dice": {
-      "initialCount": 4,
-      "maxCount": 7,
-      "sides": 6,
-      "minValue": 1,
-      "maxValue": 6
+  "synergies": [
+    {
+      "id": "power_synergy",
+      "name": "霸道羁绊",
+      "stream": "power",
+      "requiredIds": [
+        "loaded_dice",
+        "heaven_dice"
+      ],
+      "description": "基础分额外 +5",
+      "effectType": "flat_bonus",
+      "params": {
+        "bonus": 5
+      }
     },
-    "passives": {
-      "maxSlots": 3
+    {
+      "id": "excess_synergy",
+      "name": "连横羁绊",
+      "stream": "excess",
+      "requiredIds": [
+        "chain_link",
+        "hidden_strength"
+      ],
+      "description": "藏拙的降维奖励每级额外 +2",
+      "effectType": "downgrade_synergy",
+      "params": {
+        "extraPerLevel": 2
+      }
     },
-    "battle": {
-      "consumablesPerRound": 2,
-      "rollsPerRound": 2,
-      "categorySelection": true
+    {
+      "id": "straight_synergy",
+      "name": "顺子羁绊",
+      "stream": "straight",
+      "requiredIds": [
+        "straight_eye",
+        "straight_intuition"
+      ],
+      "description": "顺子分类基础分额外 +10",
+      "effectType": "category_bonus",
+      "params": {
+        "categories": [
+          "small_straight",
+          "large_straight"
+        ],
+        "bonus": 10
+      }
     },
-    "startingItems": {
-      "freeConsumable": "face_change"
+    {
+      "id": "pattern_synergy",
+      "name": "花式羁绊",
+      "stream": "pattern",
+      "requiredIds": [
+        "pattern_master",
+        "perfectionist"
+      ],
+      "description": "牌型大师覆盖的分类额外 +10",
+      "effectType": "category_bonus",
+      "params": {
+        "categories": [
+          "full_house",
+          "yahtzee",
+          "three_of_a_kind"
+        ],
+        "bonus": 10
+      }
     },
-    "rounds": {
-      "total": 8
+    {
+      "id": "universal_synergy",
+      "name": "万能羁绊",
+      "stream": "universal",
+      "requiredIds": [
+        "greed",
+        "judgment_flip"
+      ],
+      "description": "反转审判获胜阈值额外降低 5% (变为 80%)",
+      "effectType": "victory_threshold_reduction",
+      "params": {
+        "reduction": 0.05
+      }
     }
-  }
+  ]
 };

@@ -651,6 +651,70 @@ body {
   line-height: 1.4;
 }
 
+/* 流派标签 */
+.stream-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}
+
+.stream-power { background: #e74c3c; color: white; }
+.stream-excess { background: #f1c40f; color: #2c3e50; }
+.stream-straight { background: #3498db; color: white; }
+.stream-pattern { background: #9b59b6; color: white; }
+.stream-universal { background: #1abc9c; color: white; }
+
+/* 羁绊徽章 */
+.synergy-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.synergy-badge {
+  background: linear-gradient(135deg, #f39c12, #d35400);
+  border: 1px solid #e67e22;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  animation: glow-pulse 2s infinite;
+  box-shadow: 0 0 10px rgba(243, 156, 18, 0.4);
+}
+
+.synergy-badge i {
+  font-style: normal;
+}
+
+@keyframes glow-pulse {
+  0% { box-shadow: 0 0 5px rgba(243, 156, 18, 0.4); }
+  50% { box-shadow: 0 0 15px rgba(243, 156, 18, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(243, 156, 18, 0.4); }
+}
+
+/* 侧栏羁绊面板 */
+.synergy-panel {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.synergy-panel h4 {
+  font-size: 11px;
+  color: #f39c12;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
 /* ==================== 操作按钮 ==================== */
 .actions {
   display: flex;

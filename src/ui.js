@@ -847,6 +847,28 @@ class GameUI {
       this._elements.passivesList.appendChild(card);
     });
 
+    // Render synergies
+    const activeSynergies = this._gameFlow.getCheating()._getActiveSynergies();
+    if (activeSynergies.length > 0) {
+      const synPanel = document.createElement('div');
+      synPanel.className = 'synergy-panel';
+      synPanel.innerHTML = '<h4>活跃羁绊</h4>';
+      
+      const synList = document.createElement('div');
+      synList.className = 'synergy-list';
+      
+      activeSynergies.forEach(syn => {
+        const badge = document.createElement('div');
+        badge.className = 'synergy-badge';
+        badge.title = syn.description;
+        badge.innerHTML = `<i>✨</i><span>${syn.name}</span>`;
+        synList.appendChild(badge);
+      });
+      
+      synPanel.appendChild(synList);
+      this._elements.passivesList.appendChild(synPanel);
+    }
+
     if (this._activeDetail?.type === 'passive') {
       this._renderDetailOverlay();
     }
@@ -873,6 +895,14 @@ class GameUI {
     name.textContent = item.name;
 
     card.append(iconWrap, name);
+
+    if (item.stream) {
+      const streamTag = document.createElement('span');
+      streamTag.className = `stream-tag stream-${item.stream}`;
+      streamTag.textContent = item.stream;
+      card.appendChild(streamTag);
+    }
+
     return card;
   }
 
@@ -1688,8 +1718,8 @@ class GameUI {
     }
 
     this._elements.detailTitle.textContent = item.name;
-    this._elements.detailSubtitle.textContent =
-      `${this._activeDetail.type === 'consumable' ? '消耗品' : '被动能力'} · 成本 ${item.cost ?? '-'}`;
+    this._elements.detailSubtitle.innerHTML =
+      `${this._activeDetail.type === 'consumable' ? '消耗品' : '被动能力'} · 成本 ${item.cost ?? '-'}${item.stream ? ` · <span class="stream-tag stream-${item.stream}">${item.stream}</span>` : ''}`;
     this._elements.detailDescription.textContent = item.description || '无描述';
     this._elements.detailEffect.textContent = this._getItemEffectHint(item);
   }

@@ -97,7 +97,8 @@
     "effectType": "dice_floor",
     "params": { "minValue": 2 },
     "description": "所有骰子最低点数为2",
-    "tags": ["dice_modify"]
+    "tags": ["dice_modify"],
+    "stream": "power"
   },
   {
     "id": "clone_dice",
@@ -117,7 +118,8 @@
     "effectType": "excess_bonus",
     "params": { "perExcess": 5 },
     "description": "超出分类最低要求的每颗匹配骰子+5固定加成",
-    "tags": ["scoring"]
+    "tags": ["scoring"],
+    "stream": "excess"
   },
   {
     "id": "straight_eye",
@@ -127,7 +129,8 @@
     "effectType": "loose_consecutive",
     "params": { "maxGap": 1 },
     "description": "顺子允许间隔1（如1-3-4-5算小顺）",
-    "tags": ["category_modify"]
+    "tags": ["category_modify"],
+    "stream": "straight"
   },
   {
     "id": "greed",
@@ -137,7 +140,8 @@
     "effectType": "score_multiplier",
     "params": { "multiplier": 2.0 },
     "description": "最终分数×2.0（翻倍！）",
-    "tags": ["multiplier"]
+    "tags": ["multiplier"],
+    "stream": "universal"
   },
   {
     "id": "pattern_master",
@@ -147,7 +151,8 @@
     "effectType": "category_bonus",
     "params": { "categories": ["full_house", "yahtzee", "three_of_a_kind"], "bonus": 20 },
     "description": "满堂红、豹子和三条分类+20固定加成",
-    "tags": ["scoring"]
+    "tags": ["scoring"],
+    "stream": "pattern"
   },
   {
     "id": "decree_override",
@@ -157,7 +162,8 @@
     "effectType": "category_override",
     "params": { "forceCategory": "three_of_a_kind", "minDice": 2 },
     "description": "强制将骰子匹配为指定分类，无视实际点数",
-    "tags": ["category_modify", "rule_break"]
+    "tags": ["category_modify", "rule_break"],
+    "stream": "universal"
   },
   {
     "id": "heaven_dice",
@@ -168,6 +174,7 @@
     "params": { "bonus": 15 },
     "description": "基础分数+15，且此被动无法被封印",
     "tags": ["scoring", "unsealable", "rule_break"],
+    "stream": "power",
     "unsealable": true
   },
   {
@@ -178,7 +185,8 @@
     "effectType": "victory_reverse",
     "params": { "threshold": 0.85 },
     "description": "达到目标分数的85%即可获胜",
-    "tags": ["victory_condition", "rule_break"]
+    "tags": ["victory_condition", "rule_break"],
+    "stream": "universal"
   },
   {
     "id": "spare_dice",
@@ -208,7 +216,8 @@
     "effectType": "high_dice_multiplier",
     "params": { "multiplier": 1.5, "minValue": 4 },
     "description": "所有骰子≥4时，最终分数×1.5",
-    "tags": ["multiplier", "conditional"]
+    "tags": ["multiplier", "conditional"],
+    "stream": "pattern"
   },
   {
     "id": "straight_momentum",
@@ -218,7 +227,8 @@
     "effectType": "straight_multiplier",
     "params": { "multiplier": 1.6, "categories": ["small_straight", "large_straight"] },
     "description": "匹配小顺或大顺时，最终分数×1.6",
-    "tags": ["multiplier", "conditional"]
+    "tags": ["multiplier", "conditional"],
+    "stream": "straight"
   },
   {
     "id": "double_vision",
@@ -228,7 +238,8 @@
     "effectType": "pair_value_bonus",
     "params": { "perPairMultiplier": 3 },
     "description": "匹配对子时，每组对子+(对子点数×3)加成",
-    "tags": ["scoring", "conditional"]
+    "tags": ["scoring", "conditional"],
+    "stream": "pattern"
   },
   {
     "id": "rainbow",
@@ -288,7 +299,8 @@
     "effectType": "category_bonus_doubled",
     "params": { "category": "pair" },
     "description": "对子分类奖励翻倍",
-    "tags": ["scoring", "conditional"]
+    "tags": ["scoring", "conditional"],
+    "stream": "pattern"
   },
   {
     "id": "straight_intuition",
@@ -298,7 +310,8 @@
     "effectType": "selected_category_flat_bonus",
     "params": { "categories": ["small_straight", "large_straight"], "bonus": 10 },
     "description": "选择顺子时额外+10",
-    "tags": ["scoring", "conditional"]
+    "tags": ["scoring", "conditional"],
+    "stream": "straight"
   },
   {
     "id": "three_expert",
@@ -308,7 +321,8 @@
     "effectType": "selected_dice_multiplier",
     "params": { "category": "three_of_a_kind", "multiplier": 1.5 },
     "description": "选择三条时骰子点数×1.5",
-    "tags": ["scoring", "conditional"]
+    "tags": ["scoring", "conditional"],
+    "stream": "pattern"
   },
   {
     "id": "yahtzee_hunter",
@@ -318,7 +332,8 @@
     "effectType": "loose_all_same",
     "params": { "allowedDifferent": 1 },
     "description": "选择豹子时允许1颗骰子不同",
-    "tags": ["category_modify", "rule_break"]
+    "tags": ["category_modify", "rule_break"],
+    "stream": "pattern"
   },
   {
     "id": "hidden_strength",
@@ -328,7 +343,8 @@
     "effectType": "downgrade_bonus",
     "params": { "perLevel": 8 },
     "description": "选择的分类比可匹配的最高分类低几级，每低一级+8",
-    "tags": ["scoring", "conditional"]
+    "tags": ["scoring", "conditional"],
+    "stream": "excess"
   },
   {
     "id": "targeted_reroll",

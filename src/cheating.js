@@ -299,6 +299,14 @@ class CheatingAbilities {
   }
 
   /**
+   * Seal a specific passive by id (mainly for testing or future enemy rules).
+   * @param {string} passiveId
+   */
+  sealPassive(passiveId) {
+    this._sealedPassiveId = passiveId;
+  }
+
+  /**
    * Check if a passive is sealed.
    * @param {string} passiveId
    * @returns {boolean}
@@ -320,6 +328,7 @@ class CheatingAbilities {
    */
   getFlatBonuses(matchedCategory, dicePool, matchedCount) {
     let total = 0;
+    const activeSynergies = this._getActiveSynergies();
 
     for (const passive of this._passives) {
       if (this.isPassiveSealed(passive.id)) continue;
@@ -329,7 +338,14 @@ class CheatingAbilities {
         const minDice = matchedCategory.minDice || 0;
         if (matchedCount > minDice) {
           const excess = matchedCount - minDice;
-          total += excess * (passive.params.perExcess || 0);
+          let bonus = passive.params.perExcess || 0;
+          
+          // excess_synergy (连横羁绊) - hidden_strength per level bonus
+          // Note: chain_link and hidden_strength synergy affects hidden_strength's perLevel bonus.
+          // We apply it here if this passive is the one being modified, or handle it in the downgrade_bonus block.
+          // Let's handle synergy specifically for hidden_strength in its block.
+          
+          total += excess * bonus;
         }
       }
 
@@ -393,7 +409,33 @@ class CheatingAbilities {
 
       // 藏拙 (hidden_strength) - downgrade bonus (computed externally, added here)
       if (passive.effectType === 'downgrade_bonus' && this._downgradeBonus) {
-        total += this._downgradeBonus;
+        let finalDowngradeBonus = this._downgradeBonus;
+        
+        // excess_synergy (连横羁绊)
+        const synergy = activeSynergies.find(s => s.id === 'excess_synergy');
+        if (synergy) {
+          // If 藏拙 is active and we have the synergy, increase the bonus per level.
+          // this._downgradeBonus is levels * 8. We need to know levels.
+          // Assuming params.perLevel is 8.
+          const perLevel = passive.params.perLevel || 8;
+          const levels = Math.floor(this._downgradeBonus / perLevel);
+          finalDowngradeBonus += levels * (synergy.params.extraPerLevel || 0);
+        }
+        
+        total += finalDowngradeBonus;
+      }
+    }
+
+    // Apply specific synergy flat bonuses
+    for (const synergy of activeSynergies) {
+      if (synergy.effectType === 'flat_bonus') {
+        total += synergy.params.bonus || 0;
+      }
+      if (synergy.effectType === 'category_bonus') {
+        const cats = synergy.params.categories || [];
+        if (cats.includes(matchedCategory.id)) {
+          total += synergy.params.bonus || 0;
+        }
       }
     }
 
@@ -464,6 +506,37 @@ class CheatingAbilities {
     product *= this._roundMultiplier;
 
     return product;
+  }
+
+  /**
+   * Get victory threshold reduction from synergies.
+   * @returns {number} total reduction (e.g. 0.05 for 5%)
+   */
+  getVictoryThresholdReduction() {
+    let total = 0;
+    const activeSynergies = this._getActiveSynergies();
+    for (const synergy of activeSynergies) {
+      if (synergy.effectType === 'victory_threshold_reduction') {
+        total += synergy.params.reduction || 0;
+      }
+    }
+    return total;
+  }
+
+  /**
+   * Internal: Detect active synergies based on owned passives.
+   * @returns {Array<object>} list of active synergy definitions
+   */
+  _getActiveSynergies() {
+    const ownedIds = new Set(this._passives.map(p => p.id));
+    const allSynergies = this._dataConfig.getSynergies();
+    
+    return allSynergies.filter(synergy => {
+      // All required passives must be owned and NOT sealed
+      return synergy.requiredIds.every(id => {
+        return ownedIds.has(id) && !this.isPassiveSealed(id);
+      });
+    });
   }
 
   /**

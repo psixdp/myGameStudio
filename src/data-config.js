@@ -28,6 +28,7 @@ class DataConfig {
         this._data.enemies = DATA.enemies;
         this._data.enemyRules = DATA.enemyRules;
         this._data.economy = DATA.economy;
+        this._data.synergies = DATA.synergies || [];
       } catch (e) {
         // Fallback to fetch if data bundle is not available
         const files = [
@@ -37,6 +38,7 @@ class DataConfig {
           'enemies.json',
           'enemy-rules.json',
           'economy.json',
+          'synergies.json',
         ];
         for (const file of files) {
           const response = await fetch(`${dataDir}/${file}`);
@@ -59,6 +61,7 @@ class DataConfig {
         'enemies.json',
         'enemy-rules.json',
         'economy.json',
+        'synergies.json',
       ];
       for (const file of files) {
         const filePath = join(dataDir, file);
@@ -106,6 +109,14 @@ class DataConfig {
     for (const c of this._data.scoringCategories) {
       if (this._categoryById[c.id]) this._warnings.push(`Duplicate id "${c.id}" in scoringCategories`);
       this._categoryById[c.id] = c;
+    }
+
+    // Index synergies by id
+    this._synergyById = {};
+    if (this._data.synergies) {
+      for (const s of this._data.synergies) {
+        this._synergyById[s.id] = s;
+      }
     }
   }
 
@@ -163,6 +174,16 @@ class DataConfig {
   /** Get all enemy rule definitions. */
   getEnemyRules() {
     return this._data.enemyRules.map(r => ({ ...r }));
+  }
+
+  /** Get all synergy definitions. */
+  getSynergies() {
+    return (this._data.synergies || []).map(s => ({ ...s }));
+  }
+
+  /** Get a single synergy by id. */
+  getSynergy(id) {
+    return this._synergyById[id] ? { ...this._synergyById[id] } : null;
   }
 
   /** Get token reward for a given round (1-based). */
