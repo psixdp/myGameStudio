@@ -30,6 +30,13 @@ const ITEM_ICON_DEFINITIONS = Object.freeze({
   rainbow: { symbol: 'rainbow', primary: '#ff006e', secondary: '#8338ec' },
   lucky_six: { symbol: 'six', primary: '#fb5607', secondary: '#ffbe0b' },
   dice_army: { symbol: 'army', primary: '#06d6a0', secondary: '#118ab2' },
+  pair_king: { symbol: 'crown', primary: '#fbbf24', secondary: '#f59e0b' },
+  straight_intuition: { symbol: 'straight', primary: '#34d399', secondary: '#6ee7b7' },
+  three_expert: { symbol: 'chain', primary: '#a78bfa', secondary: '#c4b5fd' },
+  yahtzee_hunter: { symbol: 'fist', primary: '#ef4444', secondary: '#fca5a5' },
+  hidden_strength: { symbol: 'gem', primary: '#8b5cf6', secondary: '#c084fc' },
+  targeted_reroll: { symbol: 'pipPlus', primary: '#22d3ee', secondary: '#67e8f9' },
+  mimic: { symbol: 'clone', primary: '#f472b6', secondary: '#f9a8d4' },
 });
 
 const FALLBACK_ITEM_ICON = Object.freeze({
@@ -182,6 +189,8 @@ class GameUI {
     this._logCollapsed = false;
     // Hold state
     this._heldIndices = new Set();    // 留骰阶段：玩家标记保留的骰子索引
+    this._availableCategories = null; // 分类选择阶段的可选分类
+    this._selectedCategoryId = null;  // 当前选中的分类 ID
   }
 
   /**
@@ -248,6 +257,11 @@ class GameUI {
       btnConfirmHold: document.getElementById('btn-confirm-hold'),
       btnUseConsumable: document.getElementById('btn-use-consumable'),
 
+      // Category select
+      categorySelect: document.getElementById('category-select'),
+      categoryOptions: document.getElementById('category-options'),
+      btnConfirmCategory: document.getElementById('btn-confirm-category'),
+
       // Shop
       shopOverlay: document.getElementById('shop-overlay'),
       shopTokens: document.getElementById('shop-tokens'),
@@ -296,6 +310,7 @@ class GameUI {
     this._elements.btnRoll.addEventListener('click', () => this._onRoll());
     this._elements.btnConfirmResult.addEventListener('click', () => this._onConfirmResult());
     this._elements.btnConfirmHold.addEventListener('click', () => this._onConfirmHold());
+    this._elements.btnConfirmCategory.addEventListener('click', () => this._onConfirmCategory());
     this._elements.btnUseConsumable.addEventListener('click', () => this._onUseConsumable());
     this._elements.btnRefreshShop.addEventListener('click', () => this._onRefreshShop());
     this._elements.btnCloseShop.addEventListener('click', () => this._onCloseShop());
@@ -334,7 +349,7 @@ class GameUI {
     }
 
     // 清理选择模式（如果不在投掷后中间状态）
-    if (!this._isPostRollState(state) && state !== GameState.HOLD_DECISION) {
+    if (!this._isPostRollState(state) && state !== GameState.HOLD_DECISION && state !== GameState.CATEGORY_SELECT) {
       this._isSelectingTarget = false;
       this._selectedDieIndex = null;
       this._selectedDieIndex2 = null;
@@ -353,6 +368,9 @@ class GameUI {
       case GameState.ROLL_RESULT:
         // 投掷后、确认前：显示分数对比和可使用消耗品
         await this._renderRollResult();
+        break;
+      case GameState.CATEGORY_SELECT:
+        this._renderCategorySelect();
         break;
       case GameState.SHOP:
         this._renderShop();
@@ -495,6 +513,106 @@ class GameUI {
     await this._showBowlStatus();
 
     this._pendingRollResult = result;
+    this._render();
+  }
+
+  /** ==================== 渲染分类选择阶段 ==================== */
+
+  _renderCategorySelect() {
+    const state = this._gameFlow.getState();
+    if (state !== GameState.CATEGORY_SELECT) {
+      this._elements.categorySelect.classList.add('hidden');
+      return;
+    }
+
+    const categories = this._availableCategories;
+    if (!categories || categories.length === 0) {
+      this._gameFlow.finalizeBattle();
+      this._pendingRollResult = null;
+      this._render();
+      return;
+    }
+
+    // 渲染骰子
+    const dice = this._gameFlow.getDicePool().getDice();
+    this._renderDice(dice);
+
+    // 渲染分数
+    const targetScore = this._gameFlow.getEnemy().getTargetScore();
+    this._elements.currentScore.textContent = '?';
+    this._elements.targetScoreDisplay.textContent = targetScore;
+
+    this._setCategoryLabel('选择牌型');
+    this._setRollStatus('请选择一个牌型', 'placeholder');
+
+    // 渲染分类卡片
+    const container = this._elements.categoryOptions;
+    container.innerHTML = '';
+
+    const bestScore = Math.max(...categories.map(c => c.preview));
+
+    for (const cat of categories) {
+      const card = document.createElement('div');
+      card.className = 'category-card';
+      if (cat.preview === bestScore) card.classList.add('best');
+      if (this._selectedCategoryId === cat.id) card.classList.add('selected');
+
+      card.innerHTML = `
+        <span class="cat-name">${cat.name}${cat.preview === bestScore ? ' ★' : ''}</span>
+        <span class="cat-preview">${cat.preview}分</span>
+      `;
+
+      card.addEventListener('click', () => {
+        this._selectedCategoryId = cat.id;
+        // 更新分数预览
+        this._elements.currentScore.textContent = cat.preview;
+        this._renderCategoryCards();
+      });
+
+      container.appendChild(card);
+    }
+
+    // 显示确认按钮
+    const btnConfirm = this._elements.btnConfirmCategory;
+    btnConfirm.classList.toggle('hidden', !this._selectedCategoryId);
+    btnConfirm.disabled = !this._selectedCategoryId;
+
+    this._elements.categorySelect.classList.remove('hidden');
+
+    // 渲染消耗品和被动
+    const cheating = this._gameFlow.getCheating();
+    this._renderConsumables(cheating.getConsumables());
+    this._renderPassives(cheating.getPassives());
+  }
+
+  _renderCategoryCards() {
+    const categories = this._availableCategories;
+    const container = this._elements.categoryOptions;
+    const cards = container.querySelectorAll('.category-card');
+
+    cards.forEach((card, i) => {
+      const cat = categories[i];
+      card.classList.toggle('selected', this._selectedCategoryId === cat.id);
+    });
+
+    this._elements.btnConfirmCategory.classList.toggle('hidden', !this._selectedCategoryId);
+    this._elements.btnConfirmCategory.disabled = !this._selectedCategoryId;
+  }
+
+  async _onConfirmCategory() {
+    if (!this._selectedCategoryId) return;
+
+    const result = this._gameFlow.confirmCategory(
+      this._selectedCategoryId,
+      this._availableCategories
+    );
+
+    this._availableCategories = null;
+    this._selectedCategoryId = null;
+    this._elements.categorySelect.classList.add('hidden');
+    this._pendingRollResult = null;
+
+    this._renderLog();
     this._render();
   }
 
@@ -878,11 +996,23 @@ class GameUI {
       this._elements.btnConfirmHold.classList.remove('hidden');
       this._elements.btnConfirmHold.textContent = `✋ 确认留骰（保留${this._heldIndices.size}颗）`;
       this._elements.btnUseConsumable.disabled = true;
+      this._elements.categorySelect.classList.add('hidden');
       return;
     }
 
-    // 正常流程隐藏确认留骰按钮
+    // 分类选择阶段：隐藏其他按钮
+    if (state === GameState.CATEGORY_SELECT) {
+      this._elements.btnRoll.disabled = true;
+      this._elements.btnConfirmResult.classList.add('hidden');
+      this._elements.btnUseConsumable.disabled = true;
+      return;
+    }
+
+    // 正常流程隐藏确认留骰按钮和分类选择
     this._elements.btnConfirmHold.classList.add('hidden');
+    if (state !== GameState.CATEGORY_SELECT) {
+      this._elements.categorySelect.classList.add('hidden');
+    }
 
     // 投掷后中间状态：显示动态按钮，允许使用消耗品
     if (this._isPostRollState(state)) {
@@ -994,19 +1124,28 @@ class GameUI {
     this._elements.diceBowl.classList.remove('covered', 'revealing');
   }
 
-  /** 确认结果 - 进入最终结算 */
+  /** 确认结果 - 进入分类选择或直接结算 */
   async _onConfirmResult() {
-    // 揭晓时刻：先掀开碗盖，再结算
+    // 揭晓时刻：先掀开碗盖
     if (!this._elements.diceBowl.classList.contains('hidden')) {
       await this._hideBowlStatus();
     }
 
-    // Phase 2: 通过 GameFlow 完成最终结算并转换状态
-    this._gameFlow.finalizeBattle();
+    // 尝试进入分类选择
+    const availableCategories = this._gameFlow.enterCategorySelect();
+    if (availableCategories) {
+      // 有可选分类，进入分类选择阶段
+      this._availableCategories = availableCategories;
+      this._selectedCategoryId = null;
+      this._render();
+      return;
+    }
 
-    this._pendingRollResult = null;  // 清除投掷结果
+    // 强夺令或无分类选择，直接结算
+    this._gameFlow.finalizeBattle();
+    this._pendingRollResult = null;
     this._renderLog();
-    this._render();  // 渲染下一阶段（商店/游戏结束）
+    this._render();
   }
 
   _onSelectConsumable(index) {
@@ -1279,6 +1418,8 @@ class GameUI {
     this._isRolling = false;
     this._selectedConsumableIndex = null;
     this._heldIndices.clear();
+    this._availableCategories = null;
+    this._selectedCategoryId = null;
     this._closeDetail();
     this._render();
   }

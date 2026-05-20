@@ -424,3 +424,31 @@ describe('Hold and reroll', () => {
     assert.ok(!same, 'rerolling all dice should produce different values');
   });
 });
+
+// ---------------------------------------------------------------------------
+// copyValue (模仿)
+// ---------------------------------------------------------------------------
+describe('copyValue', () => {
+  it('copies value from one die to another', () => {
+    const pool = makePool();
+    pool.roll();
+    pool.setDie(0, 5);
+    pool.setDie(1, 2);
+    pool.copyValue(0, 1);
+    assert.strictEqual(pool.getValues()[1], 5, 'target die should have source value');
+    // 源骰子不变
+    assert.strictEqual(pool.getValues()[0], 5, 'source die should be unchanged');
+  });
+
+  it('ignores out-of-range indices', () => {
+    const pool = makePool();
+    pool.roll();
+    pool.setDie(0, 3);
+    pool.setDie(1, 4);
+    const before = [...pool.getValues()];
+    pool.copyValue(-1, 0);
+    pool.copyValue(0, 99);
+    pool.copyValue(100, -5);
+    assert.deepStrictEqual(pool.getValues(), before, 'values should not change with bad indices');
+  });
+});

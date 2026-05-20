@@ -601,3 +601,68 @@ describe('two-phase flow state machine', () => {
     assert.notStrictEqual(game.getState(), GameState.BOWL_COVERED);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Category selection flow (分类选择流程)
+// ---------------------------------------------------------------------------
+describe('Category selection flow', () => {
+  it('enterCategorySelect transitions to CATEGORY_SELECT', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+
+    // 使用旧版 executeRollPhase 进入 BOWL_COVERED
+    game.executeRollPhase();
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+
+    const available = game.enterCategorySelect();
+    assert.strictEqual(game.getState(), GameState.CATEGORY_SELECT);
+    assert.ok(Array.isArray(available), 'should return array of categories');
+    assert.ok(available.length > 0, 'should have at least one category');
+    // bust 应该始终在列表中
+    const ids = available.map(c => c.id);
+    assert.ok(ids.includes('bust'), 'bust should always be available');
+  });
+
+  it('enterCategorySelect returns null with 强夺令', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+
+    // 添加强夺令被动 (category_override effect type)
+    game.getCheating()._passives.push({
+      id: 'decree_override',
+      effectType: 'category_override',
+      params: { forceCategory: 'three_of_a_kind', minDice: 2 },
+      name: '强夺令',
+      cost: 5,
+      type: 'passive'
+    });
+
+    game.executeRollPhase();
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+
+    const result = game.enterCategorySelect();
+    assert.strictEqual(result, null, 'should return null when 强夺令 is active');
+    // 状态不应变为 CATEGORY_SELECT
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+  });
+
+  it('confirmCategory finalizes battle', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+
+    // 进入 BOWL_COVERED
+    game.executeRollPhase();
+    const available = game.enterCategorySelect();
+    assert.strictEqual(game.getState(), GameState.CATEGORY_SELECT);
+    assert.ok(available.length > 0);
+
+    // 选择一个可用分类
+    const selectedId = available[0].id;
+    const result = game.confirmCategory(selectedId, available);
+    assert.ok(result, 'confirmCategory should return a result');
+    assert.ok(result.victory !== undefined, 'result should have victory field');
+    assert.ok(result.score !== undefined, 'result should have score field');
+    // 状态应已离开 CATEGORY_SELECT
+    assert.notStrictEqual(game.getState(), GameState.CATEGORY_SELECT);
+  });
+});

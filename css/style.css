@@ -1615,3 +1615,83 @@ button:disabled {
 .event-log-content::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
+
+/* ==================== 分类选择 ==================== */
+
+.category-select {
+  margin-top: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.category-select h3 {
+  margin: 0 0 12px;
+  text-align: center;
+  color: #e2e8f0;
+  font-size: 16px;
+}
+
+.category-options {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.category-card {
+  background: rgba(15, 23, 42, 0.8);
+  border: 2px solid rgba(100, 116, 139, 0.4);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  min-width: 90px;
+  user-select: none;
+}
+
+.category-card:hover {
+  border-color: #60a5fa;
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.category-card.selected {
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+}
+
+.category-card.best {
+  border-color: rgba(52, 211, 153, 0.6);
+}
+
+.category-card .cat-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.category-card.selected .cat-name {
+  color: #fbbf24;
+}
+
+.category-card .cat-preview {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.category-card.selected .cat-preview {
+  color: #fbbf24;
+}
+
+.category-card.best-label::after {
+  content: ' ★';
+  color: #34d399;
+  font-size: 11px;
+}

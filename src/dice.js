@@ -146,6 +146,17 @@ class DicePool {
   }
 
   /**
+   * Copy value from one die to another (模仿 consumable).
+   * @param {number} fromIndex
+   * @param {number} toIndex
+   */
+  copyValue(fromIndex, toIndex) {
+    if (fromIndex < 0 || fromIndex >= this._dice.length) return;
+    if (toIndex < 0 || toIndex >= this._dice.length) return;
+    this._dice[toIndex].value = this._dice[fromIndex].value;
+  }
+
+  /**
    * Reroll a specific die, guaranteeing result >= minValue.
    * @param {number} index
    * @param {number} minValue

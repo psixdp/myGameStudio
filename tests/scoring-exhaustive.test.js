@@ -244,51 +244,51 @@ describe('Hand-calculated score verification', () => {
     });
   }
 
-  it('[6,6,6] yahtzee → 18×3 = 54', () => {
-    assert.strictEqual(scoreSimple([6, 6, 6]).finalScore, 54);
+  it('[6,6,6] yahtzee → 18×4 = 72', () => {
+    assert.strictEqual(scoreSimple([6, 6, 6]).finalScore, 72);
   });
 
-  it('[1,1,1] yahtzee → 3×3 = 9', () => {
-    assert.strictEqual(scoreSimple([1, 1, 1]).finalScore, 9);
+  it('[1,1,1] yahtzee → 3×4 = 12', () => {
+    assert.strictEqual(scoreSimple([1, 1, 1]).finalScore, 12);
   });
 
-  it('[3,3,3,5,5] full_house → 19+15 = 34', () => {
-    assert.strictEqual(scoreSimple([3, 3, 3, 5, 5]).finalScore, 34);
+  it('[3,3,3,5,5] full_house → 19+25 = 44', () => {
+    assert.strictEqual(scoreSimple([3, 3, 3, 5, 5]).finalScore, 44);
   });
 
-  it('[1,2,3,4,5] large_straight → 15+20 = 35', () => {
-    assert.strictEqual(scoreSimple([1, 2, 3, 4, 5]).finalScore, 35);
+  it('[1,2,3,4,5] large_straight → 15+30 = 45', () => {
+    assert.strictEqual(scoreSimple([1, 2, 3, 4, 5]).finalScore, 45);
   });
 
-  it('[3,4,5,6] small_straight → 18+10 = 28', () => {
-    assert.strictEqual(scoreSimple([3, 4, 5, 6]).finalScore, 28);
+  it('[3,4,5,6] small_straight → 18+15 = 33', () => {
+    assert.strictEqual(scoreSimple([3, 4, 5, 6]).finalScore, 33);
   });
 
-  it('[4,4,4,2] three_of_a_kind → 14+5 = 19', () => {
-    assert.strictEqual(scoreSimple([4, 4, 4, 2]).finalScore, 19);
+  it('[4,4,4,2] three_of_a_kind → 14+8 = 22', () => {
+    assert.strictEqual(scoreSimple([4, 4, 4, 2]).finalScore, 22);
   });
 
-  it('[6,6,3] pair → 15+0 = 15', () => {
-    assert.strictEqual(scoreSimple([6, 6, 3]).finalScore, 15);
+  it('[6,6,3] pair → 15+2 = 17', () => {
+    assert.strictEqual(scoreSimple([6, 6, 3]).finalScore, 17);
   });
 
   it('[1,3,5] bust → 9+0 = 9', () => {
     assert.strictEqual(scoreSimple([1, 3, 5]).finalScore, 9);
   });
 
-  it('[6,6,6,6,6,6] yahtzee → 36×3 = 108', () => {
-    assert.strictEqual(scoreSimple([6, 6, 6, 6, 6, 6]).finalScore, 108);
+  it('[6,6,6,6,6,6] yahtzee → 36×4 = 144', () => {
+    assert.strictEqual(scoreSimple([6, 6, 6, 6, 6, 6]).finalScore, 144);
   });
 
-  it('[1,1,1,1,1,1,1] yahtzee → 7×3 = 21', () => {
-    assert.strictEqual(scoreSimple([1, 1, 1, 1, 1, 1, 1]).finalScore, 21);
+  it('[1,1,1,1,1,1,1] yahtzee → 7×4 = 28', () => {
+    assert.strictEqual(scoreSimple([1, 1, 1, 1, 1, 1, 1]).finalScore, 28);
   });
 
-  it('[2,3,4,5,6,6] large_straight → 26+20 = 46', () => {
-    assert.strictEqual(scoreSimple([2, 3, 4, 5, 6, 6]).finalScore, 46);
+  it('[2,3,4,5,6,6] large_straight → 26+30 = 56', () => {
+    assert.strictEqual(scoreSimple([2, 3, 4, 5, 6, 6]).finalScore, 56);
   });
 
-  it('[4,4,4,5,5,5] full_house → 27+15 = 42', () => {
-    assert.strictEqual(scoreSimple([4, 4, 4, 5, 5, 5]).finalScore, 42);
+  it('[4,4,4,5,5,5] full_house → 27+25 = 52', () => {
+    assert.strictEqual(scoreSimple([4, 4, 4, 5, 5, 5]).finalScore, 52);
   });
 });

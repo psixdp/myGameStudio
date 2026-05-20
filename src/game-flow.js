@@ -20,6 +20,7 @@ const GameState = {
   BATTLE: 'BATTLE',
   HOLD_DECISION: 'HOLD_DECISION',    // 第一次投掷后，留骰决策阶段
   BOWL_COVERED: 'BOWL_COVERED',  // 投掷后、确认前（盖碗阶段）
+  CATEGORY_SELECT: 'CATEGORY_SELECT', // 分类选择阶段
   ROLL_RESULT: 'ROLL_RESULT',  // 兼容保留：映射为 BOWL_COVERED 阶段
   SHOP: 'SHOP',
   VICTORY: 'VICTORY',
@@ -251,12 +252,47 @@ class GameFlow {
   }
 
   /**
+   * Enter category selection phase. Returns available categories for UI.
+   * If 强夺令 is active, skips selection and returns null.
+   * @returns {Array|null} available categories or null if skipped
+   */
+  enterCategorySelect() {
+    if (this._state !== GameState.BOWL_COVERED) return null;
+
+    // 强夺令跳过分类选择
+    const overridePassive = this._cheating.getPassiveByEffect('category_override');
+    if (overridePassive) return null;
+
+    const available = this._combat.getAvailableCategories();
+    this._state = GameState.CATEGORY_SELECT;
+    return available;
+  }
+
+  /**
+   * Confirm category selection and finalize battle.
+   * @param {string} categoryId
+   * @param {Array} [availableCategories]
+   * @returns {object|null} battle result or null
+   */
+  confirmCategory(categoryId, availableCategories) {
+    if (this._state !== GameState.CATEGORY_SELECT) return null;
+
+    this._combat.selectCategory(categoryId, availableCategories);
+
+    // 直接进入结算
+    this._state = GameState.BOWL_COVERED;
+    return this.finalizeBattle();
+  }
+
+  /**
    * Phase 2: Finalize battle result (steps 9-12).
    * Applies bonuses, determines victory/defeat, and transitions state.
    * @returns {object|null} final combat result or null if invalid state
    */
   finalizeBattle() {
-    if (this._state !== GameState.BOWL_COVERED && this._state !== GameState.ROLL_RESULT) {
+    if (this._state !== GameState.BOWL_COVERED &&
+        this._state !== GameState.CATEGORY_SELECT &&
+        this._state !== GameState.ROLL_RESULT) {
       return null;
     }
 
@@ -301,7 +337,9 @@ class GameFlow {
    * @returns {object|null} updated roll result or null if invalid state
    */
   recalculateRollResult() {
-    if (this._state !== GameState.BOWL_COVERED && this._state !== GameState.ROLL_RESULT) {
+    if (this._state !== GameState.BOWL_COVERED &&
+        this._state !== GameState.CATEGORY_SELECT &&
+        this._state !== GameState.ROLL_RESULT) {
       return null;
     }
     return this._combat.recalculateFromCurrentDice();

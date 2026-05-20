@@ -438,3 +438,159 @@ describe('Two-phase roll: first roll + hold + second roll', () => {
     assert.ok(log.includes('step2_roll_dice')); // old step names
   });
 });
+
+// ---------------------------------------------------------------------------
+// Category selection (分类选择)
+// ---------------------------------------------------------------------------
+describe('Category selection', () => {
+  it('getAvailableCategories returns matchable categories with previews', () => {
+    const combat = makeCombatSystem(42);
+    combat.executeFirstRoll(1);
+    combat.executeHoldAndReroll([]);
+    // 强制设置骰子为 [3,3,5,6]，应该匹配对子
+    combat._dice.setDie(0, 3);
+    combat._dice.setDie(1, 3);
+    combat._dice.setDie(2, 5);
+    combat._dice.setDie(3, 6);
+
+    const available = combat.getAvailableCategories();
+    const ids = available.map(c => c.id);
+    assert.ok(ids.includes('pair'), 'pair should be available for [3,3,5,6]');
+    assert.ok(ids.includes('bust'), 'bust should always be available');
+    // 每个类别应该有 preview 数值
+    for (const cat of available) {
+      assert.strictEqual(typeof cat.preview, 'number', `${cat.id} should have preview`);
+    }
+  });
+
+  it('getAvailableCategories excludes blocked categories', () => {
+    const combat = makeCombatSystem(42);
+    // dealer (round 3) blocks pair
+    combat.executeFirstRoll(3);
+    combat.executeHoldAndReroll([]);
+    // 强制设置骰子为 [4,4,3,2]，正常匹配对子
+    combat._dice.setDie(0, 4);
+    combat._dice.setDie(1, 4);
+    combat._dice.setDie(2, 3);
+    combat._dice.setDie(3, 2);
+
+    const available = combat.getAvailableCategories();
+    const ids = available.map(c => c.id);
+    assert.ok(!ids.includes('pair'), 'pair should be blocked by dealer');
+    assert.ok(ids.includes('bust'), 'bust should still be available');
+  });
+
+  it('getAvailableCategories always includes bust', () => {
+    const combat = makeCombatSystem(42);
+    combat.executeFirstRoll(1);
+    combat.executeHoldAndReroll([]);
+    // 用不同骰子值测试多次
+    combat._dice.setDie(0, 1);
+    combat._dice.setDie(1, 2);
+    combat._dice.setDie(2, 3);
+    combat._dice.setDie(3, 4);
+
+    const available = combat.getAvailableCategories();
+    const ids = available.map(c => c.id);
+    assert.ok(ids.includes('bust'), 'bust should always be present');
+
+    // 测试全相同骰子也包含 bust
+    combat._dice.setDie(0, 6);
+    combat._dice.setDie(1, 6);
+    combat._dice.setDie(2, 6);
+    combat._dice.setDie(3, 6);
+    const available2 = combat.getAvailableCategories();
+    const ids2 = available2.map(c => c.id);
+    assert.ok(ids2.includes('bust'), 'bust should be present even with yahtzee');
+  });
+
+  it('selectCategory updates matchedCategory', () => {
+    const combat = makeCombatSystem(42);
+    combat.executeFirstRoll(1);
+    combat.executeHoldAndReroll([]);
+    // 强制骰子 [3,3,5,6]，对子可匹配
+    combat._dice.setDie(0, 3);
+    combat._dice.setDie(1, 3);
+    combat._dice.setDie(2, 5);
+    combat._dice.setDie(3, 6);
+
+    const available = combat.getAvailableCategories();
+    const result = combat.selectCategory('pair', available);
+    assert.ok(result, 'selectCategory should return a result');
+    assert.strictEqual(combat._currentRoundInfo.matchedCategory.id, 'pair');
+    assert.strictEqual(combat._currentRoundInfo.playerSelectedCategory, true);
+  });
+
+  it('selectCategory with 藏拙 calculates downgrade bonus', () => {
+    const combat = makeCombatSystem(42);
+    // 添加藏拙被动
+    combat._cheating._passives.push({
+      id: 'hidden_strength',
+      effectType: 'downgrade_bonus',
+      params: { perLevel: 8 },
+      name: '藏拙',
+      cost: 4,
+      type: 'passive'
+    });
+    combat.executeFirstRoll(1);
+    combat.executeHoldAndReroll([]);
+    // 强制骰子 [3,3,5,6]，pair(priority:6) 和 bust(priority:7) 可选
+    combat._dice.setDie(0, 3);
+    combat._dice.setDie(1, 3);
+    combat._dice.setDie(2, 5);
+    combat._dice.setDie(3, 6);
+
+    const available = combat.getAvailableCategories();
+    // 选择 bust (priority 7)，比最佳 pair (priority 6) 低 1 级，应获得 +8
+    combat.selectCategory('bust', available);
+    // 验证 downgradeBonus 被设置
+    assert.strictEqual(combat._cheating._downgradeBonus, 8);
+  });
+
+  it('recalculateFromCurrentDice preserves player selected category', () => {
+    const combat = makeCombatSystem(42);
+    combat.executeFirstRoll(1);
+    combat.executeHoldAndReroll([]);
+    // 强制骰子 [3,3,5,6]
+    combat._dice.setDie(0, 3);
+    combat._dice.setDie(1, 3);
+    combat._dice.setDie(2, 5);
+    combat._dice.setDie(3, 6);
+
+    const available = combat.getAvailableCategories();
+    combat.selectCategory('pair', available);
+
+    // 修改骰子使得 pair 不再成立，但分类应被保留
+    combat._dice.setDie(0, 1);
+    combat._dice.setDie(1, 2);
+
+    const result = combat.recalculateFromCurrentDice();
+    assert.strictEqual(result.matchedCategory.id, 'pair',
+      'player-selected category should be preserved even when dice no longer match');
+  });
+
+  it('loose_all_same (豹子猎手) allows 1 different die', () => {
+    const combat = makeCombatSystem(42);
+    // 添加豹子猎手被动
+    combat._cheating._passives.push({
+      id: 'yahtzee_hunter',
+      effectType: 'loose_all_same',
+      params: { allowedDifferent: 1 },
+      name: '豹子猎手',
+      cost: 6,
+      type: 'passive'
+    });
+    combat.executeFirstRoll(1);
+    combat.executeHoldAndReroll([]);
+    // 强制骰子 [6,6,6,2]，允许1颗不同 → 匹配豹子
+    combat._dice.setDie(0, 6);
+    combat._dice.setDie(1, 6);
+    combat._dice.setDie(2, 6);
+    combat._dice.setDie(3, 2);
+
+    const available = combat.getAvailableCategories();
+    const ids = available.map(c => c.id);
+    assert.ok(ids.includes('yahtzee'),
+      'yahtzee should match with yahtzee_hunter when 1 die is different');
+  });
+});

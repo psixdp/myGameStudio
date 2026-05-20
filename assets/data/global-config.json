@@ -11,7 +11,8 @@
   },
   "battle": {
     "consumablesPerRound": 2,
-    "rollsPerRound": 1
+    "rollsPerRound": 2,
+    "categorySelection": true
   },
   "startingItems": {
     "freeConsumable": "face_change"

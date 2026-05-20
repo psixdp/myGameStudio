@@ -516,6 +516,10 @@ class Combat {
           this._cheating.addRoundFlatBonus(sacrificed * bonusPerSac);
         }
         break;
+
+      case 'copy_dice_value':
+        this._dice.copyValue(targetIndex, targetIndex2);
+        break;
     }
 
     return ability;
@@ -535,10 +539,15 @@ class Combat {
     // Apply passive floor again (in case dice were modified below floor)
     this._applyPassiveFloor();
 
-    // Re-match category with current dice values
+    // Re-match or preserve category
     const blockedCategories = this._enemy.getBlockedCategories();
     const categories = this._dataConfig.getCategories();
-    const matchedCategory = this._matchCategory(this._dice.getValues(), categories, blockedCategories);
+    let matchedCategory;
+    if (info.playerSelectedCategory) {
+      matchedCategory = info.matchedCategory;
+    } else {
+      matchedCategory = this._matchCategory(this._dice.getValues(), categories, blockedCategories);
+    }
 
     // Re-calculate base score
     const baseScore = this._calculateBase(this._dice.getValues(), matchedCategory);
@@ -555,7 +564,9 @@ class Combat {
       targetScore: info.targetScore,
       matchedCategory,
       baseScore,
-      adjustedBase
+      adjustedBase,
+      playerSelectedCategory: info.playerSelectedCategory || false,
+      availableCategories: info.availableCategories || null
     };
 
     // Calculate score with multipliers (for UI display)
@@ -572,6 +583,134 @@ class Combat {
       matchedCategory,
       targetScore: info.targetScore,
       score,  // Final score with multipliers applied
+      flatBonus,
+      multiplier
+    };
+  }
+
+  /**
+   * Get all available categories for player selection.
+   * Returns categories that match current dice, plus bust as fallback.
+   * Each includes a score preview.
+   * @param {number[]} [values] - dice values (defaults to current pool)
+   * @returns {Array<{id, name, priority, matchType, bonusType, bonusValue, preview: number}>}
+   */
+  getAvailableCategories(values) {
+    values = values || this._dice.getValues();
+    const blockedCategories = this._enemy.getBlockedCategories();
+    const categories = this._dataConfig.getCategories();
+    const blocked = new Set(blockedCategories);
+    const available = [];
+
+    for (const cat of categories) {
+      if (blocked.has(cat.id)) continue;
+      if (cat.matchType === 'fallback') continue; // add bust last
+      if (this._matchesCategory(values, cat)) {
+        const preview = this._calculateScorePreview(values, cat);
+        available.push({ ...cat, preview });
+      }
+    }
+
+    // 散牌始终兜底
+    const bust = categories.find(c => c.matchType === 'fallback');
+    if (bust && !blocked.has(bust.id)) {
+      const preview = this._calculateScorePreview(values, bust);
+      available.push({ ...bust, preview });
+    }
+
+    // 按优先级排序（高优先级在前 = 低 priority 数字）
+    available.sort((a, b) => a.priority - b.priority);
+
+    return available;
+  }
+
+  /**
+   * Calculate score preview for a specific category.
+   * @param {number[]} values
+   * @param {object} category
+   * @returns {number}
+   */
+  _calculateScorePreview(values, category) {
+    const baseScore = this._calculateBase(values, category);
+    let adjustedBase = baseScore;
+    if (this._enemy.hasZeroLowestRule()) {
+      adjustedBase = this._applyZeroLowest(values, baseScore);
+    }
+    const matchedCount = this._calcMatchedCount(category, values);
+    const flatBonus = this._cheating.getFlatBonuses(category, this._dice, matchedCount);
+    const multiplier = this._cheating.getMultipliers(category, this._dice);
+    return Math.floor((adjustedBase + flatBonus) * multiplier);
+  }
+
+  /**
+   * Player selects a category. Updates round info and calculates downgrade bonus.
+   * @param {string} categoryId
+   * @param {Array} [availableCategories] - from getAvailableCategories, for 藏拙 calc
+   * @returns {object} updated score result
+   */
+  selectCategory(categoryId, availableCategories) {
+    const info = this._currentRoundInfo;
+    if (!info) throw new Error('No round info');
+
+    const categories = this._dataConfig.getCategories();
+    const cat = categories.find(c => c.id === categoryId);
+    if (!cat) return null;
+
+    const values = this._dice.getValues();
+    const baseScore = this._calculateBase(values, cat);
+
+    let adjustedBase = baseScore;
+    if (this._enemy.hasZeroLowestRule()) {
+      adjustedBase = this._applyZeroLowest(values, baseScore);
+    }
+
+    // 藏拙：计算降维奖励
+    if (availableCategories && availableCategories.length > 0) {
+      const bestPriority = Math.min(...availableCategories.map(c => c.priority));
+      const levelsBelow = cat.priority - bestPriority;
+      if (levelsBelow > 0) {
+        const hiddenStrength = this._cheating.getPassiveByEffect('downgrade_bonus');
+        if (hiddenStrength) {
+          const bonus = levelsBelow * (hiddenStrength.params.perLevel || 8);
+          this._cheating.setDowngradeBonus(bonus);
+        }
+      }
+    }
+
+    this._currentRoundInfo = {
+      ...info,
+      matchedCategory: cat,
+      baseScore,
+      adjustedBase,
+      playerSelectedCategory: true,
+      availableCategories
+    };
+
+    return this._buildScoreResult();
+  }
+
+  /**
+   * Build score result from current state.
+   * @returns {object}
+   */
+  _buildScoreResult() {
+    const info = this._currentRoundInfo;
+    const matchedCategory = info.matchedCategory;
+    const values = this._dice.getValues();
+
+    const matchedCount = this._calcMatchedCount(matchedCategory, values);
+    const flatBonus = this._cheating.getFlatBonuses(matchedCategory, this._dice, matchedCount);
+    const multiplier = this._cheating.getMultipliers(matchedCategory, this._dice);
+    const score = Math.floor((info.adjustedBase + flatBonus) * multiplier);
+
+    return {
+      dice: this._dice.getDice(),
+      diceValues: values,
+      baseScore: info.baseScore,
+      adjustedBase: info.adjustedBase,
+      matchedCategory,
+      targetScore: info.targetScore,
+      score,
       flatBonus,
       multiplier
     };
@@ -615,7 +754,19 @@ class Combat {
 
     switch (cat.matchType) {
       case 'all_same':
-        return values.length >= 3 && values.every(v => v === values[0]);
+        if (values.length < 3) return false;
+        if (values.every(v => v === values[0])) return true;
+        // 豹子猎手：允许1颗不同
+        {
+          const hunterPassive = this._cheating.getPassiveByEffect('loose_all_same');
+          if (hunterPassive) {
+            const freq = {};
+            for (const v of values) freq[v] = (freq[v] || 0) + 1;
+            const maxCount = Math.max(...Object.values(freq));
+            return maxCount >= values.length - (hunterPassive.params.allowedDifferent || 1);
+          }
+        }
+        return false;
       case 'full_house':
         if (values.length < 5) return false;
         const freq = {};

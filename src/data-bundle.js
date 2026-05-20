@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Data Bundle ? all game data bundled for browser use.
+ * Data Bundle — all game data bundled for browser use.
  *
  * This file contains all JSON configuration data inline,
  * generated from assets/data/*.json files.
@@ -305,9 +305,15 @@ export const DATA = {
       "type": "passive",
       "cost": 4,
       "effectType": "high_dice_multiplier",
-      "params": { "multiplier": 1.5, "minValue": 4 },
+      "params": {
+        "multiplier": 1.5,
+        "minValue": 4
+      },
       "description": "所有骰子≥4时，最终分数×1.5",
-      "tags": ["multiplier", "conditional"]
+      "tags": [
+        "multiplier",
+        "conditional"
+      ]
     },
     {
       "id": "straight_momentum",
@@ -315,9 +321,18 @@ export const DATA = {
       "type": "passive",
       "cost": 4,
       "effectType": "straight_multiplier",
-      "params": { "multiplier": 1.6, "categories": ["small_straight", "large_straight"] },
+      "params": {
+        "multiplier": 1.6,
+        "categories": [
+          "small_straight",
+          "large_straight"
+        ]
+      },
       "description": "匹配小顺或大顺时，最终分数×1.6",
-      "tags": ["multiplier", "conditional"]
+      "tags": [
+        "multiplier",
+        "conditional"
+      ]
     },
     {
       "id": "double_vision",
@@ -325,9 +340,14 @@ export const DATA = {
       "type": "passive",
       "cost": 3,
       "effectType": "pair_value_bonus",
-      "params": { "perPairMultiplier": 3 },
+      "params": {
+        "perPairMultiplier": 3
+      },
       "description": "匹配对子时，每组对子+(对子点数×3)加成",
-      "tags": ["scoring", "conditional"]
+      "tags": [
+        "scoring",
+        "conditional"
+      ]
     },
     {
       "id": "rainbow",
@@ -335,9 +355,14 @@ export const DATA = {
       "type": "passive",
       "cost": 4,
       "effectType": "scatter_diversity_bonus",
-      "params": { "perUnique": 6 },
+      "params": {
+        "perUnique": 6
+      },
       "description": "匹配散牌时，每种不同点数+6加成",
-      "tags": ["scoring", "conditional"]
+      "tags": [
+        "scoring",
+        "conditional"
+      ]
     },
     {
       "id": "lucky_six",
@@ -345,9 +370,14 @@ export const DATA = {
       "type": "passive",
       "cost": 4,
       "effectType": "six_count_multiplier",
-      "params": { "perSixMultiplier": 1.15 },
+      "params": {
+        "perSixMultiplier": 1.15
+      },
       "description": "每有1个点数为6的骰子，最终分数×1.15",
-      "tags": ["multiplier", "conditional"]
+      "tags": [
+        "multiplier",
+        "conditional"
+      ]
     },
     {
       "id": "dice_army",
@@ -355,9 +385,13 @@ export const DATA = {
       "type": "passive",
       "cost": 5,
       "effectType": "dice_count_bonus",
-      "params": { "perDie": 4 },
+      "params": {
+        "perDie": 4
+      },
       "description": "每颗骰子（含临时骰）+4固定加成",
-      "tags": ["scoring"]
+      "tags": [
+        "scoring"
+      ]
     },
     {
       "id": "devils_bargain",
@@ -365,9 +399,14 @@ export const DATA = {
       "type": "consumable",
       "cost": 2,
       "effectType": "temp_multiplier_penalty",
-      "params": { "multiplier": 1.5, "nextRoundTargetIncrease": 0.25 },
+      "params": {
+        "multiplier": 1.5,
+        "nextRoundTargetIncrease": 0.25
+      },
       "description": "本轮分数×1.5，但下轮目标分数+25%",
-      "tags": ["risk"]
+      "tags": [
+        "risk"
+      ]
     },
     {
       "id": "all_in",
@@ -375,9 +414,119 @@ export const DATA = {
       "type": "consumable",
       "cost": 2,
       "effectType": "sacrifice_consumables",
-      "params": { "bonusPerSacrifice": 8 },
+      "params": {
+        "bonusPerSacrifice": 8
+      },
       "description": "销毁全部剩余消耗品，每个+8加成",
-      "tags": ["risk"]
+      "tags": [
+        "risk"
+      ]
+    },
+    {
+      "id": "pair_king",
+      "name": "对子之王",
+      "type": "passive",
+      "cost": 3,
+      "effectType": "category_bonus_doubled",
+      "params": {
+        "category": "pair"
+      },
+      "description": "对子分类奖励翻倍",
+      "tags": [
+        "scoring",
+        "conditional"
+      ]
+    },
+    {
+      "id": "straight_intuition",
+      "name": "顺子直觉",
+      "type": "passive",
+      "cost": 3,
+      "effectType": "selected_category_flat_bonus",
+      "params": {
+        "categories": [
+          "small_straight",
+          "large_straight"
+        ],
+        "bonus": 10
+      },
+      "description": "选择顺子时额外+10",
+      "tags": [
+        "scoring",
+        "conditional"
+      ]
+    },
+    {
+      "id": "three_expert",
+      "name": "三条专家",
+      "type": "passive",
+      "cost": 4,
+      "effectType": "selected_dice_multiplier",
+      "params": {
+        "category": "three_of_a_kind",
+        "multiplier": 1.5
+      },
+      "description": "选择三条时骰子点数×1.5",
+      "tags": [
+        "scoring",
+        "conditional"
+      ]
+    },
+    {
+      "id": "yahtzee_hunter",
+      "name": "豹子猎手",
+      "type": "passive",
+      "cost": 6,
+      "effectType": "loose_all_same",
+      "params": {
+        "allowedDifferent": 1
+      },
+      "description": "选择豹子时允许1颗骰子不同",
+      "tags": [
+        "category_modify",
+        "rule_break"
+      ]
+    },
+    {
+      "id": "hidden_strength",
+      "name": "藏拙",
+      "type": "passive",
+      "cost": 4,
+      "effectType": "downgrade_bonus",
+      "params": {
+        "perLevel": 8
+      },
+      "description": "选择的分类比可匹配的最高分类低几级，每低一级+8",
+      "tags": [
+        "scoring",
+        "conditional"
+      ]
+    },
+    {
+      "id": "targeted_reroll",
+      "name": "定向",
+      "type": "consumable",
+      "cost": 2,
+      "effectType": "reroll_min",
+      "params": {
+        "minValue": 3
+      },
+      "description": "指定一颗骰子重掷，结果≥3",
+      "tags": [
+        "targeted"
+      ]
+    },
+    {
+      "id": "mimic",
+      "name": "模仿",
+      "type": "consumable",
+      "cost": 2,
+      "effectType": "copy_dice_value",
+      "params": {},
+      "description": "复制一颗骰子值到另一颗",
+      "tags": [
+        "targeted_dual"
+      ]
     }
   ],
   "economy": {
@@ -528,7 +677,7 @@ export const DATA = {
       "minDice": 3,
       "matchType": "all_same",
       "bonusType": "multiplier",
-      "bonusValue": 3
+      "bonusValue": 4
     },
     {
       "id": "full_house",
@@ -537,7 +686,7 @@ export const DATA = {
       "minDice": 5,
       "matchType": "full_house",
       "bonusType": "flat",
-      "bonusValue": 15
+      "bonusValue": 25
     },
     {
       "id": "large_straight",
@@ -547,7 +696,7 @@ export const DATA = {
       "matchType": "consecutive",
       "consecutiveCount": 5,
       "bonusType": "flat",
-      "bonusValue": 20
+      "bonusValue": 30
     },
     {
       "id": "small_straight",
@@ -557,7 +706,7 @@ export const DATA = {
       "matchType": "consecutive",
       "consecutiveCount": 4,
       "bonusType": "flat",
-      "bonusValue": 10
+      "bonusValue": 15
     },
     {
       "id": "three_of_a_kind",
@@ -567,7 +716,7 @@ export const DATA = {
       "matchType": "same_value",
       "matchCount": 3,
       "bonusType": "flat",
-      "bonusValue": 5
+      "bonusValue": 8
     },
     {
       "id": "pair",
@@ -577,7 +726,7 @@ export const DATA = {
       "matchType": "same_value",
       "matchCount": 2,
       "bonusType": "flat",
-      "bonusValue": 0
+      "bonusValue": 2
     },
     {
       "id": "bust",
@@ -597,9 +746,13 @@ export const DATA = {
       "minValue": 1,
       "maxValue": 6
     },
+    "passives": {
+      "maxSlots": 3
+    },
     "battle": {
       "consumablesPerRound": 2,
-      "rollsPerRound": 1
+      "rollsPerRound": 2,
+      "categorySelection": true
     },
     "startingItems": {
       "freeConsumable": "face_change"
