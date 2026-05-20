@@ -81,7 +81,7 @@ class Combat {
     }
 
     // Handle seal_passive rule
-    if (this._enemy.hasSealPassiveRule()) {
+    if (this._enemy.hasSealPassiveRule() && !this._isBlindJudgeActive()) {
       this._cheating.sealMostExpensivePassive();
     }
 
@@ -128,6 +128,7 @@ class Combat {
     // Step 5: Second roll (only unheld dice) + second clone trigger
     this._stepLog.push('step5_second_roll');
     this._dice.rerollUnheld();
+    this._cheating.recordReroll(1);
 
     // Second clone trigger
     const clonePassive = this._cheating.getPassiveByEffect('clone_dice');
@@ -148,7 +149,7 @@ class Combat {
 
     // Step 8: Category matching
     this._stepLog.push('step8_category_match');
-    const blockedCategories = this._enemy.getBlockedCategories();
+    const blockedCategories = this._isBlindJudgeActive() ? [] : this._enemy.getBlockedCategories();
     const categories = this._dataConfig.getCategories();
     const matchedCategory = this._matchCategory(this._dice.getValues(), categories, blockedCategories);
 
@@ -159,7 +160,7 @@ class Combat {
     // Step 10: Enemy scoring rules
     this._stepLog.push('step10_enemy_scoring_rules');
     let adjustedBase = baseScore;
-    if (this._enemy.hasZeroLowestRule()) {
+    if (this._enemy.hasZeroLowestRule() && !this._isBlindJudgeActive()) {
       adjustedBase = this._applyZeroLowest(this._dice.getValues(), baseScore);
     }
 
@@ -213,7 +214,7 @@ class Combat {
       targetScore = Math.floor(targetScore * (1 + targetIncrease));
     }
 
-    if (this._enemy.hasSealPassiveRule()) {
+    if (this._enemy.hasSealPassiveRule() && !this._isBlindJudgeActive()) {
       this._cheating.sealMostExpensivePassive();
     }
 
@@ -235,7 +236,7 @@ class Combat {
 
     // Step 6: Category matching
     this._stepLog.push('step6_category_match');
-    const blockedCategories = this._enemy.getBlockedCategories();
+    const blockedCategories = this._isBlindJudgeActive() ? [] : this._enemy.getBlockedCategories();
     const categories = this._dataConfig.getCategories();
     const matchedCategory = this._matchCategory(this._dice.getValues(), categories, blockedCategories);
 
@@ -246,7 +247,7 @@ class Combat {
     // Step 8: Enemy scoring rules
     this._stepLog.push('step8_enemy_scoring_rules');
     let adjustedBase = baseScore;
-    if (this._enemy.hasZeroLowestRule()) {
+    if (this._enemy.hasZeroLowestRule() && !this._isBlindJudgeActive()) {
       adjustedBase = this._applyZeroLowest(this._dice.getValues(), baseScore);
     }
 
@@ -316,6 +317,19 @@ class Combat {
       this._economy.earn(tokensEarned);
     }
 
+    // 处理“黑市交易”未使用的借贷消耗品惩罚扣除
+    let loanPenalty = 0;
+    const loanConsumables = this._cheating.getConsumables().filter(c => c.loaned);
+    if (loanConsumables.length > 0) {
+      for (const c of loanConsumables) {
+        loanPenalty += c.params.penaltyGold || 6;
+      }
+      if (loanPenalty > 0) {
+        this._economy.spend(Math.min(this._economy.getBalance(), loanPenalty));
+      }
+      this._cheating.clearLoanedConsumables();
+    }
+
     this._result = {
       victory,
       score: finalScore,
@@ -362,6 +376,9 @@ class Combat {
    * Apply enemy dice-modifying rules (step 3).
    */
   _applyEnemyDiceRules() {
+    if (this._isBlindJudgeActive()) {
+      return;
+    }
     // 狸猫换子 - reroll random dice
     const rerollParams = this._enemy.getRerollParams();
     if (rerollParams) {
@@ -459,6 +476,7 @@ class Combat {
 
       case 'reroll_min':
         this._dice.rerollDie(targetIndex, ability.params.minValue);
+        this._cheating.recordReroll(1);
         break;
 
       case 'replace_lowest':
@@ -471,6 +489,7 @@ class Combat {
         this._dice.clearHolds();
         this._dice.clearTempDice();
         this._rollWithClone();
+        this._cheating.recordReroll(1);
         break;
 
       case 'gamble_reroll':
@@ -519,6 +538,53 @@ class Combat {
 
       case 'copy_dice_value':
         this._dice.copyValue(targetIndex, targetIndex2);
+        break;
+
+      case 'shift_dice_parity':
+        {
+          const current = this._dice.getValues()[targetIndex];
+          let newVal = targetValue;
+          if (newVal === undefined) {
+            newVal = current === 6 ? 5 : current + 1;
+          }
+          if (Math.abs(newVal - current) === 1 && newVal >= 1 && newVal <= 6) {
+            this._dice.setDie(targetIndex, newVal);
+          }
+        }
+        break;
+
+      case 'high_risk_reroll':
+        {
+          const stream = this._rng.getStream('gamble');
+          const newVal = stream.nextInt(1, 6);
+          this._dice.setDie(targetIndex, newVal);
+          this._cheating.recordReroll(1);
+
+          if (newVal === (ability.params.successValue || 6)) {
+            this._cheating.addRoundMultiplier(ability.params.successMultiplier || 2.0);
+          } else if (newVal === (ability.params.failValue || 1)) {
+            this._cheating.addRoundMultiplier(ability.params.failMultiplier || 0.5);
+          }
+        }
+        break;
+
+      case 'split_to_extremes':
+        {
+          const stream = this._rng.getStream('gamble');
+          const dice = this._dice.getValues();
+          const targetVals = ability.params.targetValues || [2, 3, 4, 5];
+          const outcomes = ability.params.outcomes || [1, 6];
+          for (let i = 0; i < dice.length; i++) {
+            if (targetVals.includes(dice[i])) {
+              const idx = stream.nextInt(0, outcomes.length - 1);
+              this._dice.setDie(i, outcomes[idx]);
+            }
+          }
+        }
+        break;
+
+      case 'loan_consumables':
+        this._cheating.addRandomConsumables(ability.params.count || 3, ability.id);
         break;
     }
 
@@ -840,6 +906,11 @@ class Combat {
       return sum * category.bonusValue;
     }
     return sum + category.bonusValue;
+  }
+
+  /** Check if blind_judge passive is active (negates enemy rules). */
+  _isBlindJudgeActive() {
+    return this._cheating.hasPassive('blind_judge') && !this._cheating.isPassiveSealed('blind_judge');
   }
 }
 
