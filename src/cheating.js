@@ -52,6 +52,9 @@ class CheatingAbilities {
 
     /** @type {number} Target score increase ratio for next round (from 魔鬼契约) */
     this._nextRoundTargetIncrease = 0;
+
+    /** @type {number} Rerolls executed by player this round */
+    this._rerollsThisRound = 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -170,7 +173,20 @@ class CheatingAbilities {
     if (!this.canUseConsumable()) return null;
 
     const ability = this._consumableSlots[slotIndex];
-    this._consumableSlots.splice(slotIndex, 1);
+
+    // Check for cheat_rebound passive (save_consumable_chance)
+    const rebound = this.getPassiveByEffect('save_consumable_chance');
+    let saved = false;
+    if (rebound && !this.isPassiveSealed(rebound.id)) {
+      const roll = this._cloneStream.nextFloat();
+      if (roll < (rebound.params.chance || 0.25)) {
+        saved = true;
+      }
+    }
+
+    if (!saved) {
+      this._consumableSlots.splice(slotIndex, 1);
+    }
     this._usedThisRound++;
 
     // Handle reveal_weakness (透视) immediately
@@ -195,6 +211,17 @@ class CheatingAbilities {
     this._roundMultiplier = 1.0;
     this._roundFlatBonus = 0;
     this._downgradeBonus = 0;
+    this._rerollsThisRound = 0;
+  }
+
+  /** Record a reroll occurrence. */
+  recordReroll(count = 1) {
+    this._rerollsThisRound += count;
+  }
+
+  /** Get rerolls count this round. */
+  getRerollsCount() {
+    return this._rerollsThisRound;
   }
 
   /**
@@ -424,6 +451,27 @@ class CheatingAbilities {
         
         total += finalDowngradeBonus;
       }
+
+      // 奇数狂热 (odd_fanatic) - flat part
+      if (passive.effectType === 'odd_dice_bonus') {
+        const oddCount = dicePool.getValues().filter(v => v % 2 !== 0).length;
+        total += oddCount * (passive.params.perOddFlat || 6);
+      }
+
+      // 否极泰来 (bottom_out) - ones bonus, doubled on fallback
+      if (passive.effectType === 'low_value_bonus') {
+        const onesCount = dicePool.getValues().filter(v => v === (passive.params.value || 1)).length;
+        let bonus = onesCount * (passive.params.flatBonus || 12);
+        if (passive.params.fallbackDoubled && (matchedCategory.id === 'bust' || matchedCategory.matchType === 'fallback')) {
+          bonus *= 2;
+        }
+        total += bonus;
+      }
+
+      // 盲眼法官 (blind_judge) - flat bonus
+      if (passive.effectType === 'negate_enemy_rule') {
+        total += passive.params.bonusFlat || 15;
+      }
     }
 
     // Apply specific synergy flat bonuses
@@ -500,6 +548,39 @@ class CheatingAbilities {
           product *= passive.params.multiplier || 1.5;
         }
       }
+
+      // 奇数狂热 (odd_fanatic) - multiplier part
+      if (passive.effectType === 'odd_dice_bonus' && dicePool) {
+        const oddCount = dicePool.getValues().filter(v => v % 2 !== 0).length;
+        product *= (1.0 + oddCount * (passive.params.perOddMultiplier || 0.05));
+      }
+
+      // 偶数秩序 (even_order)
+      if (passive.effectType === 'all_even_multiplier' && dicePool) {
+        const values = dicePool.getValues();
+        if (values.length > 0 && values.every(v => v % 2 === 0)) {
+          product *= passive.params.multiplier || 1.8;
+        }
+      }
+
+      // 双极共鸣 (bipolar_resonance)
+      if (passive.effectType === 'polar_multiplier' && dicePool) {
+        const values = dicePool.getValues();
+        const allowed = passive.params.allowedValues || [1, 6];
+        if (values.length > 0 && values.every(v => allowed.includes(v))) {
+          const hasFirst = values.includes(allowed[0]);
+          const hasSecond = values.includes(allowed[1]);
+          if (hasFirst && hasSecond) {
+            product *= passive.params.multiplier || 2.0;
+          }
+        }
+      }
+
+      // 赌徒谬误 (gamblers_fallacy)
+      if (passive.effectType === 'reroll_momentum') {
+        const count = this._rerollsThisRound;
+        product *= (1.0 + count * (passive.params.perRerollMultiplier || 0.15));
+      }
     }
 
     // Temporary round multiplier (from consumables like 魔鬼契约)
@@ -552,6 +633,36 @@ class CheatingAbilities {
       }
     }
     return null;
+  }
+
+  /**
+   * Add random consumables (for black market deal loan).
+   * @param {number} count
+   * @param {string} sourceAbilityId
+   * @returns {number} number of consumables added
+   */
+  addRandomConsumables(count, sourceAbilityId) {
+    const allConsumables = this._dataConfig.getAbilities('consumable');
+    const pool = allConsumables.filter(c => c.id !== 'black_market_deal');
+    if (pool.length === 0) return 0;
+
+    let addedCount = 0;
+    for (let i = 0; i < count; i++) {
+      const idx = this._cloneStream.nextInt(0, pool.length - 1);
+      const picked = pool[idx];
+      this._consumableSlots.push({
+        ...picked,
+        loaned: true,
+        loanSource: sourceAbilityId
+      });
+      addedCount++;
+    }
+    return addedCount;
+  }
+
+  /** Clear all loaned consumables. */
+  clearLoanedConsumables() {
+    this._consumableSlots = this._consumableSlots.filter(c => !c.loaned);
   }
 
   // ---------------------------------------------------------------------------

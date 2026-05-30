@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Data Bundle — all game data bundled for browser use.
+ * Data Bundle ? all game data bundled for browser use.
  *
  * This file contains all JSON configuration data inline,
  * generated from assets/data/*.json files.
@@ -198,9 +198,9 @@ export const DATA = {
       "cost": 3,
       "effectType": "score_multiplier",
       "params": {
-        "multiplier": 2
+        "multiplier": 1.5
       },
-      "description": "最终分数×2.0（翻倍！）",
+      "description": "最终分数×1.5",
       "tags": [
         "multiplier"
       ],
@@ -543,18 +543,202 @@ export const DATA = {
       "tags": [
         "targeted_dual"
       ]
+    },
+    {
+      "id": "odd_fanatic",
+      "name": "奇数狂热",
+      "type": "passive",
+      "cost": 4,
+      "effectType": "odd_dice_bonus",
+      "params": {
+        "perOddFlat": 6,
+        "perOddMultiplier": 0.05
+      },
+      "description": "每有一颗奇数点数(1,3,5)的骰子，本轮+6分，且最终倍率+0.05",
+      "tags": [
+        "scoring",
+        "multiplier",
+        "conditional"
+      ]
+    },
+    {
+      "id": "even_order",
+      "name": "偶数秩序",
+      "type": "passive",
+      "cost": 4,
+      "effectType": "all_even_multiplier",
+      "params": {
+        "multiplier": 1.8
+      },
+      "description": "结算时，若骰子池中所有骰子点数均为偶数(2,4,6)，则最终分数×1.8",
+      "tags": [
+        "multiplier",
+        "conditional"
+      ]
+    },
+    {
+      "id": "parity_shift",
+      "name": "微调戏法",
+      "type": "consumable",
+      "cost": 1,
+      "effectType": "shift_dice_parity",
+      "params": {
+        "amount": 1
+      },
+      "description": "将一个骰子点数+1或-1(6点只能-1，1点只能+1)，使其奇偶性反转",
+      "tags": [
+        "targeted"
+      ]
+    },
+    {
+      "id": "gamblers_fallacy",
+      "name": "赌徒谬误",
+      "type": "passive",
+      "cost": 4,
+      "effectType": "reroll_momentum",
+      "params": {
+        "perRerollMultiplier": 0.15
+      },
+      "description": "本轮每次重掷骰子，最终倍率+0.15",
+      "tags": [
+        "multiplier",
+        "risk"
+      ]
+    },
+    {
+      "id": "fate_roulette",
+      "name": "命运左轮",
+      "type": "consumable",
+      "cost": 2,
+      "effectType": "high_risk_reroll",
+      "params": {
+        "successValue": 6,
+        "failValue": 1,
+        "successMultiplier": 2,
+        "failMultiplier": 0.5
+      },
+      "description": "重掷一颗骰子。若结果为6，最终分数×2.0；为1，最终分数×0.5",
+      "tags": [
+        "risk",
+        "targeted"
+      ]
+    },
+    {
+      "id": "bottom_out",
+      "name": "否极泰来",
+      "type": "passive",
+      "cost": 3,
+      "effectType": "low_value_bonus",
+      "params": {
+        "value": 1,
+        "flatBonus": 12,
+        "fallbackDoubled": true
+      },
+      "description": "每有一颗点数为1的骰子本轮+12分。若最终匹配为“散牌”，此加成翻倍",
+      "tags": [
+        "scoring",
+        "conditional"
+      ]
+    },
+    {
+      "id": "bipolar_resonance",
+      "name": "双极共鸣",
+      "type": "passive",
+      "cost": 5,
+      "effectType": "polar_multiplier",
+      "params": {
+        "allowedValues": [
+          1,
+          6
+        ],
+        "multiplier": 2
+      },
+      "description": "结算时，若骰子池中只有点数为1和6的骰子(两者均须至少出现一次)，则最终分数×2.0",
+      "tags": [
+        "multiplier",
+        "conditional"
+      ]
+    },
+    {
+      "id": "extremes_fission",
+      "name": "两极分化",
+      "type": "consumable",
+      "cost": 2,
+      "effectType": "split_to_extremes",
+      "params": {
+        "targetValues": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "outcomes": [
+          1,
+          6
+        ]
+      },
+      "description": "将骰子池中所有点数为2、3、4、5的中间态骰子，随机转化为1或6",
+      "tags": [
+        "targeted"
+      ]
+    },
+    {
+      "id": "blind_judge",
+      "name": "盲眼法官",
+      "type": "passive",
+      "cost": 5,
+      "effectType": "negate_enemy_rule",
+      "params": {
+        "bonusFlat": 15
+      },
+      "description": "忽略当前敌人的一个负面规则限制，且本轮最终分数额外+15",
+      "tags": [
+        "scoring",
+        "rule_break"
+      ]
+    },
+    {
+      "id": "black_market_deal",
+      "name": "黑市交易",
+      "type": "consumable",
+      "cost": 2,
+      "effectType": "loan_consumables",
+      "params": {
+        "count": 3,
+        "turnLimit": 2,
+        "penaltyGold": 6
+      },
+      "description": "立即随机借贷3个消耗品，限本轮/两轮内用完。战斗结束时，每剩一个扣除6金币",
+      "tags": [
+        "risk"
+      ]
+    },
+    {
+      "id": "cheat_rebound",
+      "name": "出千回弹",
+      "type": "passive",
+      "cost": 4,
+      "effectType": "save_consumable_chance",
+      "params": {
+        "chance": 0.25
+      },
+      "description": "使用消耗品时，有25%的概率不消耗它，将其重新保留在行囊中",
+      "tags": [
+        "persistent",
+        "rule_break"
+      ]
     }
   ],
   "economy": {
     "tokenRewards": [
-      5,
-      5,
       6,
       6,
       7,
       7,
       8,
-      9
+      8,
+      9,
+      10
     ],
     "shop": {
       "itemsPerRefresh": 3,
@@ -597,7 +781,7 @@ export const DATA = {
       "id": "croupier",
       "round": 4,
       "name": "赌场荷官",
-      "targetScore": 35,
+      "targetScore": 30,
       "rules": [
         "zero_lowest"
       ]
@@ -606,7 +790,7 @@ export const DATA = {
       "id": "swindler",
       "round": 5,
       "name": "老千同行",
-      "targetScore": 50,
+      "targetScore": 42,
       "rules": [
         "swap_dice"
       ]
@@ -615,7 +799,7 @@ export const DATA = {
       "id": "manager",
       "round": 6,
       "name": "赌场经理",
-      "targetScore": 68,
+      "targetScore": 55,
       "rules": [
         "seal_passive"
       ]
@@ -624,7 +808,7 @@ export const DATA = {
       "id": "underground_king",
       "round": 7,
       "name": "地下赌王",
-      "targetScore": 88,
+      "targetScore": 70,
       "rules": [
         "suppress_all"
       ]
@@ -633,7 +817,7 @@ export const DATA = {
       "id": "king_of_cheats",
       "round": 8,
       "name": "千王之王",
-      "targetScore": 110,
+      "targetScore": 88,
       "rules": [],
       "bossRule": {
         "pool": "all",

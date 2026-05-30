@@ -24,35 +24,35 @@
     "id": "croupier",
     "round": 4,
     "name": "赌场荷官",
-    "targetScore": 35,
+    "targetScore": 30,
     "rules": ["zero_lowest"]
   },
   {
     "id": "swindler",
     "round": 5,
     "name": "老千同行",
-    "targetScore": 50,
+    "targetScore": 42,
     "rules": ["swap_dice"]
   },
   {
     "id": "manager",
     "round": 6,
     "name": "赌场经理",
-    "targetScore": 68,
+    "targetScore": 55,
     "rules": ["seal_passive"]
   },
   {
     "id": "underground_king",
     "round": 7,
     "name": "地下赌王",
-    "targetScore": 88,
+    "targetScore": 70,
     "rules": ["suppress_all"]
   },
   {
     "id": "king_of_cheats",
     "round": 8,
     "name": "千王之王",
-    "targetScore": 110,
+    "targetScore": 88,
     "rules": [],
     "bossRule": { "pool": "all", "count": 2 }
   }
