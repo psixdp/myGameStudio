@@ -151,10 +151,10 @@ describe('AC-3: 5 dice matching', () => {
 // AC-4: Base score calculation
 // ---------------------------------------------------------------------------
 describe('AC-4: Base score calculation', () => {
-  it('[6,6,3] pair → sum=15, bonus=2, base=17', () => {
+  it('[6,6,3] pair → sum=15, bonus=3, base=18', () => {
     const r = scoreWith([6, 6, 3]);
     assert.strictEqual(r.breakdown.diceSum, 15);
-    assert.strictEqual(r.breakdown.categoryBase, 17); // flat: 15 + 2
+    assert.strictEqual(r.breakdown.categoryBase, 18); // flat: 15 + 3
   });
 
   it('[6,6,6] yahtzee → sum=18, ×4=72', () => {
@@ -163,14 +163,14 @@ describe('AC-4: Base score calculation', () => {
     assert.strictEqual(r.breakdown.categoryBase, 72); // 18 × 4
   });
 
-  it('[4,4,4,2] three_of_a_kind → sum=14, +8=22', () => {
+  it('[4,4,4,2] three_of_a_kind → sum=14, +10=24', () => {
     const r = scoreWith([4, 4, 4, 2]);
-    assert.strictEqual(r.breakdown.categoryBase, 22); // 14 + 8
+    assert.strictEqual(r.breakdown.categoryBase, 24); // 14 + 10
   });
 
-  it('[3,3,3,5,5] full_house → sum=19, +25=44', () => {
+  it('[3,3,3,5,5] full_house → sum=19, +28=47', () => {
     const r = scoreWith([3, 3, 3, 5, 5]);
-    assert.strictEqual(r.breakdown.categoryBase, 44); // 19 + 25
+    assert.strictEqual(r.breakdown.categoryBase, 47); // 19 + 28
   });
 });
 
@@ -272,7 +272,7 @@ describe('AC-11: Lowest zero rule', () => {
     });
     assert.strictEqual(r.category.id, 'pair'); // matching uses raw values
     assert.strictEqual(r.breakdown.diceSum, 10); // scoring uses modified (0+5+5)
-    assert.strictEqual(r.breakdown.categoryBase, 12); // pair: 10 + 2
+    assert.strictEqual(r.breakdown.categoryBase, 13); // pair: 10 + 3
   });
 
   it('[2,4,4] + lowest_zero → sum=0+4+4=8', () => {
@@ -382,9 +382,9 @@ describe('AC-16: Full house strict 3+2', () => {
 // Combined scoring examples
 // ---------------------------------------------------------------------------
 describe('Combined scoring examples', () => {
-  it('GDD example 1: [6,6,3] no passives → 17', () => {
+  it('GDD example 1: [6,6,3] no passives → 18', () => {
     const r = scoreWith([6, 6, 3]);
-    assert.strictEqual(r.finalScore, 17);
+    assert.strictEqual(r.finalScore, 18);
   });
 
   it('GDD example 2: [6,6,6] + pattern_master + greed → 98', () => {

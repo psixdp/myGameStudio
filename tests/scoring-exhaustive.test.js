@@ -252,24 +252,24 @@ describe('Hand-calculated score verification', () => {
     assert.strictEqual(scoreSimple([1, 1, 1]).finalScore, 12);
   });
 
-  it('[3,3,3,5,5] full_house → 19+25 = 44', () => {
-    assert.strictEqual(scoreSimple([3, 3, 3, 5, 5]).finalScore, 44);
+  it('[3,3,3,5,5] full_house → 19+28 = 47', () => {
+    assert.strictEqual(scoreSimple([3, 3, 3, 5, 5]).finalScore, 47);
   });
 
-  it('[1,2,3,4,5] large_straight → 15+30 = 45', () => {
-    assert.strictEqual(scoreSimple([1, 2, 3, 4, 5]).finalScore, 45);
+  it('[1,2,3,4,5] large_straight → 15+34 = 49', () => {
+    assert.strictEqual(scoreSimple([1, 2, 3, 4, 5]).finalScore, 49);
   });
 
-  it('[3,4,5,6] small_straight → 18+15 = 33', () => {
-    assert.strictEqual(scoreSimple([3, 4, 5, 6]).finalScore, 33);
+  it('[3,4,5,6] small_straight → 18+18 = 36', () => {
+    assert.strictEqual(scoreSimple([3, 4, 5, 6]).finalScore, 36);
   });
 
-  it('[4,4,4,2] three_of_a_kind → 14+8 = 22', () => {
-    assert.strictEqual(scoreSimple([4, 4, 4, 2]).finalScore, 22);
+  it('[4,4,4,2] three_of_a_kind → 14+10 = 24', () => {
+    assert.strictEqual(scoreSimple([4, 4, 4, 2]).finalScore, 24);
   });
 
-  it('[6,6,3] pair → 15+2 = 17', () => {
-    assert.strictEqual(scoreSimple([6, 6, 3]).finalScore, 17);
+  it('[6,6,3] pair → 15+3 = 18', () => {
+    assert.strictEqual(scoreSimple([6, 6, 3]).finalScore, 18);
   });
 
   it('[1,3,5] bust → 9+0 = 9', () => {
@@ -284,11 +284,11 @@ describe('Hand-calculated score verification', () => {
     assert.strictEqual(scoreSimple([1, 1, 1, 1, 1, 1, 1]).finalScore, 28);
   });
 
-  it('[2,3,4,5,6,6] large_straight → 26+30 = 56', () => {
-    assert.strictEqual(scoreSimple([2, 3, 4, 5, 6, 6]).finalScore, 56);
+  it('[2,3,4,5,6,6] large_straight → 26+34 = 60', () => {
+    assert.strictEqual(scoreSimple([2, 3, 4, 5, 6, 6]).finalScore, 60);
   });
 
-  it('[4,4,4,5,5,5] full_house → 27+25 = 52', () => {
-    assert.strictEqual(scoreSimple([4, 4, 4, 5, 5, 5]).finalScore, 52);
+  it('[4,4,4,5,5,5] full_house → 27+28 = 55', () => {
+    assert.strictEqual(scoreSimple([4, 4, 4, 5, 5, 5]).finalScore, 55);
   });
 });
