@@ -307,7 +307,12 @@ class Combat {
     let effectiveTargetScore = info.targetScore;
     const reversePassive = this._cheating.getPassiveByEffect('victory_reverse');
     if (reversePassive) {
-      effectiveTargetScore = Math.floor(info.targetScore * (reversePassive.params.threshold || 0.85));
+      let threshold = reversePassive.params.threshold || 0.85;
+      
+      // universal_synergy (万能羁绊) - further reduction
+      threshold -= this._cheating.getVictoryThresholdReduction();
+      
+      effectiveTargetScore = Math.floor(info.targetScore * threshold);
     }
 
     const victory = finalScore >= effectiveTargetScore;

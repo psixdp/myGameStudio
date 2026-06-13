@@ -275,12 +275,19 @@ class Shop {
     // Build weighted entries
     const bonusRounds = this._expansionConfig.bonusRounds || [1, 2, 3];
     const bonusWeight = this._expansionConfig.bonusWeight || 2.0;
+    const ownedStreams = new Set(this._cheating.getPassives().map(p => p.stream).filter(Boolean));
 
     const entries = candidates.map(item => {
       let weight = 1.0;
       if (item.type === 'dice_expansion' && bonusRounds.includes(this._round)) {
         weight = bonusWeight;
       }
+      
+      // Stream weighting: if you own a passive in this stream, weight increases
+      if (item.stream && ownedStreams.has(item.stream)) {
+        weight *= 1.5;
+      }
+      
       return { item, weight };
     });
 

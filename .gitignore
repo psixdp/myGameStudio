@@ -2,6 +2,7 @@
 .vs/
 .vscode/settings.json
 .idea/
+.antigravitycli/
 *.swp
 *.swo
 *~
