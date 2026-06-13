@@ -15,7 +15,7 @@
     "minDice": 5,
     "matchType": "full_house",
     "bonusType": "flat",
-    "bonusValue": 25
+    "bonusValue": 28
   },
   {
     "id": "large_straight",
@@ -25,7 +25,7 @@
     "matchType": "consecutive",
     "consecutiveCount": 5,
     "bonusType": "flat",
-    "bonusValue": 30
+    "bonusValue": 34
   },
   {
     "id": "small_straight",
@@ -35,7 +35,7 @@
     "matchType": "consecutive",
     "consecutiveCount": 4,
     "bonusType": "flat",
-    "bonusValue": 15
+    "bonusValue": 18
   },
   {
     "id": "three_of_a_kind",
@@ -45,7 +45,7 @@
     "matchType": "same_value",
     "matchCount": 3,
     "bonusType": "flat",
-    "bonusValue": 8
+    "bonusValue": 10
   },
   {
     "id": "pair",
@@ -55,7 +55,7 @@
     "matchType": "same_value",
     "matchCount": 2,
     "bonusType": "flat",
-    "bonusValue": 2
+    "bonusValue": 3
   },
   {
     "id": "bust",
