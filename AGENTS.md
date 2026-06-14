@@ -71,6 +71,38 @@
 
 首次使用时，如果项目没有配置引擎且没有游戏概念，运行 `/start` 开始引导流程。
 
+## 提交前脱敏原则（Commit Hygiene）
+
+**每次 commit 前必须执行脱敏检查。** 仓库现已公开托管在 GitHub Pages，任何提交的内容都会立即对外可见，因此这是强制纪律，不是可选步骤。
+
+### 必查清单（每次 commit 前过一遍）
+
+1. **凭证与密钥**
+   - 禁止提交：`.env` / `*.env` / `*.pem` / `*.key` / `credentials.json` / `secrets.json` / 任何包含 `API_KEY`、`TOKEN`、`SECRET`、`PRIVATE_KEY` 的文件。
+   - 禁止硬编码：GitHub PAT (`ghp_`/`github_pat_`)、OpenAI (`sk-`)、JWT、Bearer token、OAuth 密钥等。需要时一律走环境变量 + `.env`（已被 `.gitignore`）。
+2. **个人信息**
+   - 真实邮箱、手机号、住址、身份证、真实姓名（除已公开的署名外）不得进入代码或文档。
+   - 本地路径：禁止提交 `C:\Users\<用户名>\...`、`/Users/<用户名>/...` 等含系统用户名的绝对路径。
+   - 内网 IP / 私有服务器地址不得提交。
+3. **内部工作笔记**（本项目特有风险）
+   - `scratch/`、`production/session-state/`、`production/session-logs/` 已被 `.gitignore`，**不要**把内部草稿、AI 评审笔记、未公开的评分表、淘汰理由、路线图争论等内容提交到跟踪文件。
+   - 开发中的设计决策若不想公开，放 `scratch/`；要公开的才进 `design/` 或 `docs/`。
+4. **第三方资源版权**
+   - 禁止提交未经授权的美术、音频、字体。所有素材需确认许可证（CC0/CC-BY/购买授权/自制）。
+
+### 执行方式
+
+- **代理责任**：代理在 `git add` 前必须自检上述清单；如发现疑似敏感内容，**立即停止提交**并向用户报告，不得自行决定跳过。
+- **快速自检命令**（提交前可跑）：
+  ```bash
+  # 检查暂存区是否有可疑文件
+  git diff --cached --name-only | findstr /i "\.env pem key credentials secret token"
+  # 检查暂存区是否有密钥模式
+  git diff --cached | findstr /i "ghp_ github_pat_ sk- AIza Bearer"
+  ```
+- **误提交处理**：若密钥已提交，视为泄露 —— 立即吊销该凭证（改密/轮换 token），再用 `git filter-repo` 清理历史。仅 `git rm` 不够，历史中仍可访问。
+- **协作发现**：任何代理在 review 时发现他人提交含敏感信息，有义务阻止合并并升级。
+
 ## 版本控制
 
 - 使用 Git，**功能分支 + PR 合并**工作流。
