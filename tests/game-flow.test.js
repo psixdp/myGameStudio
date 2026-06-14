@@ -665,4 +665,97 @@ describe('Category selection flow', () => {
     // 状态应已离开 CATEGORY_SELECT
     assert.notStrictEqual(game.getState(), GameState.CATEGORY_SELECT);
   });
+
+  it('getAvailableCategoriesForUI returns categories without modifying state', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+    game.executeRollPhase();
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+
+    const available = game.getAvailableCategoriesForUI();
+    assert.ok(Array.isArray(available), 'should return array of categories');
+    assert.ok(available.length > 0, 'should have at least one category');
+    // 关键：状态不应改变
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED, 'should not modify state');
+  });
+
+  it('getAvailableCategoriesForUI returns null with 强夺令', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+    game.getCheating()._passives.push({
+      id: 'decree_override',
+      effectType: 'category_override',
+      params: { forceCategory: 'three_of_a_kind', minDice: 2 },
+      name: '强夺令',
+      cost: 5,
+      type: 'passive'
+    });
+    game.executeRollPhase();
+
+    const result = game.getAvailableCategoriesForUI();
+    assert.strictEqual(result, null, 'should return null when 强夺令 is active');
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED, 'should not modify state');
+  });
+
+  it('selectCategoryFromBowl transitions BOWL_COVERED directly to finalize', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+    game.executeRollPhase();
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+
+    // 取得可用分类（不影响状态）
+    const available = game.getAvailableCategoriesForUI();
+    assert.ok(available && available.length > 0);
+
+    // 直接从 BOWL_COVERED 选分类结算
+    const selectedId = available[0].id;
+    const result = game.selectCategoryFromBowl(selectedId, available);
+
+    assert.ok(result, 'selectCategoryFromBowl should return a result');
+    assert.ok(result.victory !== undefined, 'result should have victory field');
+    assert.ok(result.score !== undefined, 'result should have score field');
+    // 状态应已离开 BOWL_COVERED（进入 SHOP/VICTORY/DEFEAT）
+    assert.notStrictEqual(game.getState(), GameState.BOWL_COVERED);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Round 2: 跳过留骰 + 默认选最高分
+// ---------------------------------------------------------------------------
+describe('Skip-hold and best-score default selection', () => {
+  it('confirmHold with all-held indices (skip-hold semantics) transitions to BOWL_COVERED', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+
+    // 新两阶段流程：executeFirstRoll → HOLD_DECISION → confirmHold → BOWL_COVERED
+    game.executeFirstRoll();
+    assert.strictEqual(game.getState(), GameState.HOLD_DECISION);
+
+    const total = game.getDicePool().getDice().length;
+    const allHeld = Array.from({ length: total }, (_, i) => i);
+
+    // 全保留 = 跳过留骰语义；应正确转 BOWL_COVERED 并返回合法 result
+    const result = game.confirmHold(allHeld);
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+    assert.ok(result, 'confirmHold with all-held should return a result');
+    assert.ok(result.score !== undefined, 'result should have score field');
+  });
+
+  it('getAvailableCategoriesForUI returns list where best score is identifiable', async () => {
+    const game = await createGameFlow();
+    game.newGame(42);
+    game.executeRollPhase();
+    game.confirmHold([]);
+    assert.strictEqual(game.getState(), GameState.BOWL_COVERED);
+
+    const categories = game.getAvailableCategoriesForUI();
+    assert.ok(Array.isArray(categories) && categories.length > 0);
+
+    // 所有 category 都有 preview 字段，最高分可识别
+    const previews = categories.map(c => c.preview);
+    const bestScore = Math.max(...previews);
+    const bestCat = categories.find(c => c.preview === bestScore);
+    assert.ok(bestCat, 'should find a category with the best preview score');
+    assert.ok(bestCat.id, 'best category should have a valid id');
+  });
 });

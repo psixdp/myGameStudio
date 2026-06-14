@@ -285,6 +285,31 @@ class GameFlow {
   }
 
   /**
+   * UI pass-through: get available categories without modifying state.
+   * Used for inline category selection in BOWL_COVERED.
+   * Returns null if category_override (强夺令) is active.
+   * @returns {Array|null}
+   */
+  getAvailableCategoriesForUI() {
+    if (this._cheating.getPassiveByEffect('category_override')) return null;
+    return this._combat.getAvailableCategories();
+  }
+
+  /**
+   * UI pass-through: select category directly from BOWL_COVERED.
+   * Internally transitions BOWL_COVERED → CATEGORY_SELECT → confirmCategory.
+   * Transparent to callers; lets the UI skip the explicit CATEGORY_SELECT state.
+   * @param {string} categoryId
+   * @param {Array} [availableCategories]
+   * @returns {object|null} battle result or null
+   */
+  selectCategoryFromBowl(categoryId, availableCategories) {
+    if (this._state !== GameState.BOWL_COVERED) return null;
+    this._state = GameState.CATEGORY_SELECT;
+    return this.confirmCategory(categoryId, availableCategories);
+  }
+
+  /**
    * Phase 2: Finalize battle result (steps 9-12).
    * Applies bonuses, determines victory/defeat, and transitions state.
    * @returns {object|null} final combat result or null if invalid state
