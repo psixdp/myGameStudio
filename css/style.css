@@ -1690,6 +1690,49 @@ button:disabled {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* BOWL_COVERED 一体化：横向 grid 布局，与分数对比/消耗品同屏 */
+.category-select.inline-in-bowl {
+  padding: 10px 12px;
+}
+
+.category-select.inline-in-bowl h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.category-select.inline-in-bowl .category-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 6px;
+}
+
+.category-select.inline-in-bowl .category-card {
+  padding: 8px 6px;
+  min-width: auto;
+  font-size: 12px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.category-select.inline-in-bowl .category-card .cat-name {
+  font-size: 12px;
+}
+
+.category-select.inline-in-bowl .category-card .cat-preview {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .category-select.inline-in-bowl .category-options {
+    grid-template-columns: 1fr;
+  }
+}
+
 .category-select h3 {
   margin: 0 0 12px;
   text-align: center;

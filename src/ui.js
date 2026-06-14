@@ -255,6 +255,7 @@ class GameUI {
       btnRoll: document.getElementById('btn-roll'),
       btnConfirmResult: document.getElementById('btn-confirm-result'),
       btnConfirmHold: document.getElementById('btn-confirm-hold'),
+      btnSkipHold: document.getElementById('btn-skip-hold'),
       btnUseConsumable: document.getElementById('btn-use-consumable'),
 
       // Category select
@@ -310,6 +311,7 @@ class GameUI {
     this._elements.btnRoll.addEventListener('click', () => this._onRoll());
     this._elements.btnConfirmResult.addEventListener('click', () => this._onConfirmResult());
     this._elements.btnConfirmHold.addEventListener('click', () => this._onConfirmHold());
+    this._elements.btnSkipHold.addEventListener('click', () => this._onSkipHold());
     this._elements.btnConfirmCategory.addEventListener('click', () => this._onConfirmCategory());
     this._elements.btnUseConsumable.addEventListener('click', () => this._onUseConsumable());
     this._elements.btnRefreshShop.addEventListener('click', () => this._onRefreshShop());
@@ -516,6 +518,33 @@ class GameUI {
     this._render();
   }
 
+  /**
+   * 跳过留骰：全保留 confirmHold，跳过二次投掷动画（无骰子真正在滚）。
+   * 分身术二次生成仍会触发（被动机制），需要 toast 告知。
+   */
+  async _onSkipHold() {
+    const dicePool = this._gameFlow.getDicePool();
+    const total = dicePool.getDice().length;
+    const beforeCount = dicePool.getDice().length;
+
+    // 全保留：confirmHold 内部 executeHoldAndReroll 会跳过 rerollUnheld（无 RNG 调用），
+    // 但分身术二次生成仍触发
+    const result = this._gameFlow.confirmHold(Array.from({ length: total }, (_, i) => i));
+
+    this._heldIndices.clear();
+
+    // 分身术副作用告知
+    const afterCount = this._gameFlow.getDicePool().getDice().length;
+    if (afterCount > beforeCount) {
+      this._showToast(`分身术触发：额外骰子已加入（${beforeCount}→${afterCount}）`);
+    }
+
+    await this._showBowlStatus();
+
+    this._pendingRollResult = result;
+    this._render();
+  }
+
   /** ==================== 渲染分类选择阶段 ==================== */
 
   _renderCategorySelect() {
@@ -616,6 +645,72 @@ class GameUI {
     this._render();
   }
 
+  /**
+   * 在 BOWL_COVERED 状态下渲染牌型卡片（与分数/消耗品同屏）。
+   * - 复用 _availableCategories 缓存；首次调用时通过 getAvailableCategoriesForUI() 取。
+   * - 强夺令激活时（返回 null）不渲染面板，btn-confirm-result 保持为"一键结算"。
+   * - 单一可选分类时自动选中，省一次点击。
+   * - 不切换 GameState，不改 currentScore 为 '?'（保留 BOWL_COVERED 已算出的分数）。
+   */
+  _renderCategoryCardsInline() {
+    const state = this._gameFlow.getState();
+    if (state !== GameState.BOWL_COVERED && state !== GameState.ROLL_RESULT) {
+      this._elements.categorySelect.classList.add('hidden');
+      return;
+    }
+
+    // 强夺令：不渲染牌型卡片
+    const categories = this._gameFlow.getAvailableCategoriesForUI();
+    if (!categories || categories.length === 0) {
+      this._availableCategories = null;
+      this._selectedCategoryId = null;
+      this._elements.categorySelect.classList.add('hidden');
+      return;
+    }
+
+    this._availableCategories = categories;
+
+    // 默认选最高分牌型；若玩家已手动改选且仍有效则尊重选择
+    const bestScore = Math.max(...categories.map(c => c.preview));
+    const bestCat = categories.find(c => c.preview === bestScore);
+    if (!this._selectedCategoryId || !categories.some(c => c.id === this._selectedCategoryId)) {
+      this._selectedCategoryId = bestCat.id;
+      // 同步 currentScore 显示为默认选中的最高分
+      this._elements.currentScore.textContent = bestScore;
+    }
+
+    const container = this._elements.categoryOptions;
+    container.innerHTML = '';
+
+    for (const cat of categories) {
+      const card = document.createElement('div');
+      card.className = 'category-card';
+      if (cat.preview === bestScore) card.classList.add('best');
+      if (this._selectedCategoryId === cat.id) card.classList.add('selected');
+
+      card.innerHTML = `
+        <span class="cat-name">${cat.name}${cat.preview === bestScore ? ' ★' : ''}</span>
+        <span class="cat-preview">${cat.preview}分</span>
+      `;
+
+      card.addEventListener('click', () => {
+        this._selectedCategoryId = cat.id;
+        // 更新分数预览
+        this._elements.currentScore.textContent = cat.preview;
+        // 仅更新选中态，不重建整个面板
+        const cards = container.querySelectorAll('.category-card');
+        cards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+      });
+
+      container.appendChild(card);
+    }
+
+    // 添加 inline 布局类（横向 grid），保留 .category-select 基础样式
+    this._elements.categorySelect.classList.add('inline-in-bowl');
+    this._elements.categorySelect.classList.remove('hidden');
+  }
+
   /** ==================== 渲染投掷结果（分数对比阶段） ==================== */
   async _renderRollResult() {
     const result = this._pendingRollResult;
@@ -656,6 +751,9 @@ class GameUI {
     // 隐藏遮罩
     this._elements.shopOverlay.classList.add('hidden');
     this._elements.gameoverOverlay.classList.add('hidden');
+
+    // BOWL_COVERED 一体化：同屏渲染牌型选择卡片
+    this._renderCategoryCardsInline();
   }
 
   /** ==================== 战斗状态渲染 ==================== */
@@ -1019,12 +1117,24 @@ class GameUI {
     const state = this._gameFlow.getState();
     const cheating = this._gameFlow.getCheating();
 
-    // 留骰决策阶段：显示确认留骰按钮
+    // 留骰决策阶段：btn-roll 复用为"投掷/重新投掷"，btn-confirm-result 复用为"结算"
     if (state === GameState.HOLD_DECISION) {
-      this._elements.btnRoll.disabled = true;
-      this._elements.btnConfirmResult.classList.add('hidden');
-      this._elements.btnConfirmHold.classList.remove('hidden');
-      this._elements.btnConfirmHold.textContent = `✋ 确认留骰（保留${this._heldIndices.size}颗）`;
+      // btn-roll：未留骰时显示"🎲 投掷"（点击=重投全部），已留骰时显示"🔄 重新投掷"
+      this._elements.btnRoll.disabled = false;
+      this._elements.btnRoll.textContent = this._heldIndices.size === 0
+        ? '🎲 投掷'
+        : '🔄 重新投掷';
+
+      // btn-confirm-result：仅在未留骰时启用（等价于跳过留骰直接结算）
+      this._elements.btnConfirmResult.classList.remove('hidden');
+      this._elements.btnConfirmResult.textContent = '🎯 结算';
+      this._elements.btnConfirmResult.className = 'btn-confirm';
+      this._elements.btnConfirmResult.disabled = this._heldIndices.size > 0;
+
+      // 隐藏旧专用按钮（HTML 保留作 fallback）
+      this._elements.btnConfirmHold.classList.add('hidden');
+      this._elements.btnSkipHold.classList.add('hidden');
+
       this._elements.btnUseConsumable.disabled = true;
       this._elements.categorySelect.classList.add('hidden');
       return;
@@ -1038,29 +1148,28 @@ class GameUI {
       return;
     }
 
-    // 正常流程隐藏确认留骰按钮和分类选择
+    // 正常流程隐藏确认留骰按钮
     this._elements.btnConfirmHold.classList.add('hidden');
-    if (state !== GameState.CATEGORY_SELECT) {
+    this._elements.btnSkipHold.classList.add('hidden');
+    // BOWL_COVERED 状态保留 inline 牌型面板显示，其他状态隐藏
+    if (state !== GameState.CATEGORY_SELECT &&
+        state !== GameState.BOWL_COVERED &&
+        state !== GameState.ROLL_RESULT) {
       this._elements.categorySelect.classList.add('hidden');
     }
 
-    // 投掷后中间状态：显示动态按钮，允许使用消耗品
+    // 投掷后中间状态：显示结算按钮，允许使用消耗品
     if (this._isPostRollState(state)) {
       this._elements.btnRoll.disabled = true;
       this._elements.btnConfirmResult.classList.remove('hidden');
+      this._elements.btnConfirmResult.disabled = false;
 
-      // 根据分数动态调整按钮文本和样式
+      // BOWL_COVERED 一体化：按钮文案统一为"结算"，颜色仍按胜负反馈
       const result = this._pendingRollResult;
       if (result) {
-        // Bug fix: use final score (with multipliers) not adjustedBase
         const isWinning = result.score >= result.targetScore;
-        if (isWinning) {
-          this._elements.btnConfirmResult.textContent = '🎉 进入商店';
-          this._elements.btnConfirmResult.className = 'btn-confirm btn-success';
-        } else {
-          this._elements.btnConfirmResult.textContent = '🏳️ 认输';
-          this._elements.btnConfirmResult.className = 'btn-confirm btn-danger';
-        }
+        this._elements.btnConfirmResult.textContent = '🎯 结算';
+        this._elements.btnConfirmResult.className = isWinning ? 'btn-confirm btn-success' : 'btn-confirm btn-danger';
       }
 
       this._elements.btnUseConsumable.disabled =
@@ -1073,6 +1182,10 @@ class GameUI {
     // 正常状态的按钮逻辑
     this._elements.btnConfirmResult.classList.add('hidden');
     this._elements.btnRoll.disabled = (state !== GameState.BATTLE) || this._isRolling;
+    // 非 HOLD_DECISION 状态复位 btn-roll 文案（避免"🔄 重新投掷"残留）
+    if (state !== GameState.HOLD_DECISION) {
+      this._elements.btnRoll.textContent = '🎲 投掷';
+    }
     this._elements.btnUseConsumable.disabled =
       (state !== GameState.BATTLE) ||
       !cheating.canUseConsumable() ||
@@ -1082,6 +1195,12 @@ class GameUI {
 
   /** ==================== 事件处理 ==================== */
   async _onRoll() {
+    // HOLD_DECISION 状态下，btn-roll 复用为"重新投掷"（替代被移除的 btn-confirm-hold）
+    if (this._gameFlow.getState() === GameState.HOLD_DECISION) {
+      this._onConfirmHold();
+      return;
+    }
+
     if (this._isRolling) return;
 
     this._isRolling = true;
@@ -1154,24 +1273,59 @@ class GameUI {
     this._elements.diceBowl.classList.remove('covered', 'revealing');
   }
 
-  /** 确认结果 - 进入分类选择或直接结算 */
+  /** 确认结果 - 默认走 BOWL_COVERED 一体化（已选牌型）或强夺令直接结算 */
   async _onConfirmResult() {
+    // HOLD_DECISION 状态下：btn-confirm-result 复用为"直接结算"
+    // 全保留 confirmHold 跳到 BOWL_COVERED，同步设置默认选中（不走 _render 异步链，避免 _selectedCategoryId 时序竞争）
+    if (this._gameFlow.getState() === GameState.HOLD_DECISION) {
+      const dicePool = this._gameFlow.getDicePool();
+      const total = dicePool.getDice().length;
+      const beforeCount = total;
+
+      const result = this._gameFlow.confirmHold(Array.from({ length: total }, (_, i) => i));
+      this._heldIndices.clear();
+
+      const afterCount = this._gameFlow.getDicePool().getDice().length;
+      if (afterCount > beforeCount) {
+        this._showToast(`分身术触发：额外骰子已加入（${beforeCount}→${afterCount}）`);
+      }
+
+      await this._showBowlStatus();
+      this._pendingRollResult = result;
+
+      // 同步计算默认选中（不依赖 _render 异步链）
+      const categories = this._gameFlow.getAvailableCategoriesForUI();
+      if (categories && categories.length > 0) {
+        this._availableCategories = categories;
+        const bestScore = Math.max(...categories.map(c => c.preview));
+        const bestCat = categories.find(c => c.preview === bestScore);
+        this._selectedCategoryId = bestCat.id;
+      }
+      // 不调 _render，让后续 BOWL_COVERED 流程自己处理
+    }
+
     // 揭晓时刻：先掀开碗盖
     if (!this._elements.diceBowl.classList.contains('hidden')) {
       await this._hideBowlStatus();
     }
 
-    // 尝试进入分类选择
-    const availableCategories = this._gameFlow.enterCategorySelect();
-    if (availableCategories) {
-      // 有可选分类，进入分类选择阶段
-      this._availableCategories = availableCategories;
+    // 已选牌型：走 selectCategoryFromBowl（默认最高分或玩家手动改选）
+    if (this._selectedCategoryId && this._availableCategories) {
+      this._gameFlow.selectCategoryFromBowl(
+        this._selectedCategoryId,
+        this._availableCategories
+      );
+      this._availableCategories = null;
       this._selectedCategoryId = null;
+      this._elements.categorySelect.classList.add('hidden');
+      this._elements.categorySelect.classList.remove('inline-in-bowl');
+      this._pendingRollResult = null;
+      this._renderLog();
       this._render();
       return;
     }
 
-    // 强夺令或无分类选择，直接结算
+    // 强夺令或无牌型可选，直接 finalizeBattle
     this._gameFlow.finalizeBattle();
     this._pendingRollResult = null;
     this._renderLog();
@@ -1392,6 +1546,11 @@ class GameUI {
       this._selectedDieIndex = null;
       this._selectedDieIndex2 = null;
       this._isSelectingTarget = false;
+
+      // BOWL_COVERED 一体化：消耗品改写骰子后刷新牌型卡片
+      this._availableCategories = null;
+      this._selectedCategoryId = null;
+
       this._render();
     }
   }
@@ -1658,6 +1817,10 @@ class GameUI {
     this._selectedDieIndex = null;
     this._selectedDieIndex2 = null;
     this._isSelectingTarget = false;
+
+    // BOWL_COVERED 一体化：消耗品改写骰子后刷新牌型卡片
+    this._availableCategories = null;
+    this._selectedCategoryId = null;
 
     // 重新计算并渲染
     this._pendingRollResult = this._gameFlow.recalculateRollResult();
